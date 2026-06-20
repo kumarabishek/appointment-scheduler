@@ -1,0 +1,39 @@
+{
+  "name": "appointment-scheduler-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 8000",
+    "dev:tunnel": "tsx scripts/dev-tunnel.ts",
+    "build": "prisma generate && next build",
+    "start": "next start -p 8000",
+    "typecheck": "tsc --noEmit",
+    "google-auth": "tsx scripts/google-auth.ts",
+    "place-call": "tsx scripts/place-call.ts",
+    "test:ivr": "tsx scripts/test-ivr/check-paths.ts",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "chrono-node": "^2.7.7",
+    "googleapis": "^144.0.0",
+    "luxon": "^3.5.0",
+    "next": "^15.1.6",
+    "pg": "^8.21.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/luxon": "^3.4.2",
+    "@types/node": "^22.10.5",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "dotenv": "^16.4.5",
+    "prisma": "^7.8.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

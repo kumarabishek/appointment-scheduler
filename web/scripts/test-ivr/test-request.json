@@ -1,0 +1,18 @@
+{
+  "patient": {
+    "name": "Test Patient",
+    "dateOfBirth": "1990-01-01",
+    "callerRelationship": "self",
+    "insuranceProvider": "Test Health",
+    "insuranceMemberId": "TEST123456",
+    "callbackNumber": "+15555550123"
+  },
+  "providerName": "Wellness Partners (Test IVR)",
+  "providerPhone": "+15863103529",
+  "reason": "annual checkup",
+  "visitType": "existing patient",
+  "urgency": "routine",
+  "acceptableWindows": [
+    { "days": ["mon", "tue", "wed", "thu", "fri"], "earliest": "08:00", "latest": "18:00" }
+  ]
+}

@@ -1,0 +1,15 @@
+# OS / editor cruft
+.DS_Store
+*.log
+
+# Safety net — env + secrets (subfolders also ignore these)
+.env
+.env.local
+.env*.local
+
+# Node / Next (subfolders also ignore these)
+node_modules/
+.next/
+
+# Local PHI / data
+data/
