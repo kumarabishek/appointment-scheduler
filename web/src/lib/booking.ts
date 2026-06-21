@@ -19,6 +19,8 @@ export async function dispatchTool(
 ): Promise<string> {
   if (!rec) return "Acknowledged.";
   switch (name) {
+    case "get_patient_details":
+      return getPatientDetails(rec, args);
     case "decide_and_book":
       return decideAndBook(rec, args);
     case "finalize_booking":
@@ -28,6 +30,26 @@ export async function dispatchTool(
     default:
       return "Acknowledged.";
   }
+}
+
+/** Just-in-time PHI: return DOB / insurance only when the office asks, so these
+ *  values aren't carried in the system prompt the LLM sees every turn. `rec`
+ *  comes from the store already decrypted. */
+function getPatientDetails(rec: CallRecord, args: Args): string {
+  const p = rec.request.patient;
+  const asked = Array.isArray(args.fields) ? (args.fields as string[]) : ["date_of_birth", "insurance"];
+  const out: string[] = [];
+  if (asked.includes("date_of_birth")) {
+    out.push(`Date of birth: ${p.dateOfBirth || "not on file"}`);
+  }
+  if (asked.includes("insurance")) {
+    out.push(
+      p.insuranceProvider
+        ? `Insurance: ${p.insuranceProvider}${p.insuranceMemberId ? `, member ID ${p.insuranceMemberId}` : ""}`
+        : "Insurance: not provided — offer to give it at check-in.",
+    );
+  }
+  return out.join(". ") + ". Read back only what the office asked for.";
 }
 
 function authorize(rec: CallRecord, slot: OfferedSlot, why: string): Promise<string> {

@@ -31,9 +31,13 @@ export function buildSystemPrompt(req: AppointmentRequest): string {
     p.callerRelationship === "self"
       ? "the patient themselves"
       : `the patient's ${p.callerRelationship}, calling on their behalf`;
-  const insurance = p.insuranceProvider
-    ? `${p.insuranceProvider}, member ID ${p.insuranceMemberId}`
-    : "not provided — say you can give it when booking is finalized";
+  // Data minimization: the most sensitive identifiers (date of birth, insurance
+  // member ID) are NOT printed into the system prompt — which is sent to the LLM
+  // on every turn. Instead the agent fetches them just-in-time via the
+  // get_patient_details tool, ONLY when the office actually asks to verify. If
+  // the office never asks (common when scheduling), those values never reach
+  // the LLM at all.
+  const hasInsurance = !!p.insuranceProvider;
 
   return `You are a polite, efficient phone assistant calling ${req.providerName} to \
 schedule a medical appointment. You are an AI assistant placing this call on \
@@ -44,11 +48,18 @@ behalf of a patient. You represent ${rel}.
 Is it alright if I go ahead?" If asked, confirm you're an automated assistant and \
 that the patient has authorized this call.
 
-# Patient details (share only what's needed, when asked)
+# Patient details
 - Name: ${p.name}
-- Date of birth: ${p.dateOfBirth}
-- Insurance: ${insurance}
 - Callback number: ${p.callbackNumber ?? "will be provided"}
+- Date of birth: on file — DO NOT guess. Call get_patient_details to retrieve it.
+- Insurance: ${hasInsurance ? "on file" : "not provided"} — DO NOT guess. \
+${hasInsurance ? "Call get_patient_details when the office asks for it." : "Say it can be provided at check-in if asked."}
+
+# Verifying the patient (date of birth / insurance)
+When the office asks for the patient's date of birth or insurance to verify or \
+register them, call the get_patient_details tool to fetch the exact values, then \
+read back only what they asked for. Never invent or approximate these — they are \
+not in this prompt on purpose.
 
 # What you're booking
 - Reason for visit: ${req.reason}
@@ -133,6 +144,28 @@ export function buildTools() {
     // with { keys: "1w2#" } — `w` is a 0.5s pause, `W` a 1s pause. Pauses
     // between digits keep the IVR from misreading a fast sequence.
     { type: "dtmf" },
+    {
+      // Just-in-time PHI: DOB + insurance are kept OUT of the system prompt and
+      // returned by this tool only when the office asks to verify. Minimizes the
+      // PHI sent to the LLM (often never needed at scheduling).
+      type: "function",
+      function: {
+        name: "get_patient_details",
+        description:
+          "Fetch the patient's verification details (date of birth and insurance) " +
+          "when the office asks for them. Returns the exact values to read back.",
+        parameters: {
+          type: "object",
+          properties: {
+            fields: {
+              type: "array",
+              items: { type: "string", enum: ["date_of_birth", "insurance"] },
+              description: "Which detail(s) the office asked for.",
+            },
+          },
+        },
+      },
+    },
     {
       type: "function",
       messages: [
