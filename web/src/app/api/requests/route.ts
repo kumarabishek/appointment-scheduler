@@ -11,8 +11,9 @@ export async function POST(req: NextRequest) {
   let request: AppointmentRequest;
   try {
     request = AppointmentRequest.parse(await req.json());
-  } catch (e) {
-    return NextResponse.json({ error: "invalid request", detail: String(e) }, { status: 400 });
+  } catch {
+    // Don't echo the raw validation error (avoid leaking internals).
+    return NextResponse.json({ error: "invalid request" }, { status: 400 });
   }
 
   const record = CallRecord.parse({ request });
@@ -26,7 +27,9 @@ export async function POST(req: NextRequest) {
     record.status = "failed";
     record.transcriptSummary = `Could not place call: ${String(e)}`;
     await store.save(record);
-    return NextResponse.json({ error: "call failed", detail: String(e), record }, { status: 502 });
+    // Return a generic error + the call id; don't leak the raw error or the
+    // full record (which contains PHI) in the HTTP response.
+    return NextResponse.json({ error: "call failed", callId: record.id }, { status: 502 });
   }
 
   return NextResponse.json({ record });

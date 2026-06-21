@@ -16,3 +16,4 @@ data/
 
 # Old Python version — kept locally, not on GitHub
 python/
+.vercel

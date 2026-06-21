@@ -23,12 +23,17 @@ export function phiEncryptionEnabled(): boolean {
   return Boolean(config.phiEncryptionKey);
 }
 
-/** Encrypt a single field. Returns input unchanged if empty, already encrypted,
- *  or no key is configured. */
+/** Encrypt a single field. Returns input unchanged if empty or already
+ *  encrypted. Fails CLOSED: if there's real PHI to protect but no key is
+ *  configured, throw rather than silently store plaintext. */
 export function encryptField<T extends string | null | undefined>(plain: T): T {
   if (!plain || (plain as string).startsWith(PREFIX)) return plain;
   const k = key();
-  if (!k) return plain;
+  if (!k) {
+    throw new Error(
+      "PHI_ENCRYPTION_KEY is not set — refusing to store unencrypted PHI. Set it in the environment.",
+    );
+  }
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", k, iv);
   const ct = Buffer.concat([cipher.update(plain as string, "utf8"), cipher.final()]);
@@ -41,7 +46,11 @@ export function encryptField<T extends string | null | undefined>(plain: T): T {
 export function decryptField<T extends string | null | undefined>(value: T): T {
   if (!value || !(value as string).startsWith(PREFIX)) return value;
   const k = key();
-  if (!k) return value;
+  if (!k) {
+    // Encrypted data but no key — fail rather than hand back ciphertext as if
+    // it were plaintext.
+    throw new Error("PHI_ENCRYPTION_KEY is not set — cannot decrypt stored PHI.");
+  }
   const buf = Buffer.from((value as string).slice(PREFIX.length), "base64");
   const iv = buf.subarray(0, 12);
   const tag = buf.subarray(12, 28);

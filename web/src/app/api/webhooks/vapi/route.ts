@@ -52,11 +52,14 @@ function* iterToolCalls(msg: VapiMsg) {
 }
 
 export async function POST(req: NextRequest) {
-  if (config.vapiWebhookSecret) {
-    const secret = req.headers.get("x-vapi-secret") ?? "";
-    if (secret !== config.vapiWebhookSecret) {
-      return NextResponse.json({ error: "bad webhook secret" }, { status: 401 });
-    }
+  // Fail closed: this route is public (Clerk-exempt, since Vapi can't log in),
+  // so the shared secret is the ONLY thing protecting it. If it isn't
+  // configured, reject everything rather than accept unauthenticated calls.
+  if (!config.vapiWebhookSecret) {
+    return NextResponse.json({ error: "webhook not configured" }, { status: 503 });
+  }
+  if ((req.headers.get("x-vapi-secret") ?? "") !== config.vapiWebhookSecret) {
+    return NextResponse.json({ error: "bad webhook secret" }, { status: 401 });
   }
 
   const body = (await req.json()) as { message?: VapiMsg } & VapiMsg;
