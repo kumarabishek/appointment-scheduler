@@ -32,6 +32,10 @@ export const config = {
   // Edge-case fallback when you don't tap in time: "closest" | "decline".
   edgeFallback: env("EDGE_FALLBACK", "closest"),
 
+  // Per-user abuse guard: max outbound calls a user can place per rolling 24h.
+  // Each call is billed to your Vapi/LLM account, so cap it.
+  dailyCallLimit: Number(env("DAILY_CALL_LIMIT", "3")),
+
   // Secret used to encrypt PHI (insurance details) at rest in data/calls.json.
   // Any string works; generate a strong one, e.g. `openssl rand -base64 32`.
   // Leave empty in dev to store unencrypted (do NOT do that with real PHI).

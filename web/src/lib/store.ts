@@ -55,6 +55,11 @@ export async function save(record: CallRecord, userId?: string): Promise<void> {
   });
 }
 
+/** How many calls a user has created since `since` (for rate limiting). */
+export async function countCallsSince(userId: string, since: Date): Promise<number> {
+  return prisma.call.count({ where: { userId, createdAt: { gte: since } } });
+}
+
 /** The Clerk user who owns a call (or null). Used for ownership checks. */
 export async function ownerOf(callId: string): Promise<string | null> {
   const row = await prisma.call.findUnique({
