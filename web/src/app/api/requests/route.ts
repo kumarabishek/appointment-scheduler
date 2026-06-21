@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { placeCall } from "@/lib/vapi";
 import * as store from "@/lib/store";
 import { AppointmentRequest, CallRecord } from "@/lib/types";
@@ -8,6 +9,10 @@ export const dynamic = "force-dynamic";
 
 /** Create a booking request -> place the outbound call. */
 export async function POST(req: NextRequest) {
+  // The owning user (middleware already requires a session; double-check here).
+  const { userId } = await auth();
+  if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
   let request: AppointmentRequest;
   try {
     request = AppointmentRequest.parse(await req.json());
@@ -17,16 +22,16 @@ export async function POST(req: NextRequest) {
   }
 
   const record = CallRecord.parse({ request });
-  await store.save(record); // save first so the webhook can find it mid-call
+  await store.save(record, userId); // save first so the webhook can find it mid-call
 
   try {
     const vapiCallId = await placeCall(request);
     record.vapiCallId = vapiCallId;
-    await store.save(record);
+    await store.save(record, userId);
   } catch (e) {
     record.status = "failed";
     record.transcriptSummary = `Could not place call: ${String(e)}`;
-    await store.save(record);
+    await store.save(record, userId);
     // Return a generic error + the call id; don't leak the raw error or the
     // full record (which contains PHI) in the HTTP response.
     return NextResponse.json({ error: "call failed", callId: record.id }, { status: 502 });

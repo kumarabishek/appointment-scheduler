@@ -16,6 +16,7 @@ datasource db {
 /// AES-encrypted); the columns mirror fields we query by.
 model Call {
   id         String   @id
+  userId     String // Clerk user who owns this call — scopes all reads
   requestId  String   @unique // CallRecord.request.id
   vapiCallId String?  @unique // set once the outbound call is placed
   status     String   @default("pending")
@@ -26,5 +27,6 @@ model Call {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  @@index([userId])
   @@index([updatedAt])
 }
