@@ -15,13 +15,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <html lang="en">
         <body>
           {userId && (
-            <header
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                padding: "0.75rem 1rem",
-              }}
-            >
+            <header className="topbar">
               <UserButton />
             </header>
           )}
