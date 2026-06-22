@@ -9,5 +9,6 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  return NextResponse.json({ calls: await store.all(userId) });
+  // Return display-only DTOs (no DOB / insurance / callback / notes).
+  return NextResponse.json({ calls: await store.allDTO(userId) });
 }

@@ -13,6 +13,17 @@ import { CallRecord } from "./types";
 
 const ICS = path.join(process.cwd(), "data", "appointments.ics");
 
+/** Escape a value for an iCalendar text field per RFC 5545: backslash, comma,
+ *  and semicolon are escaped; CR/LF become the literal "\n" sequence. This stops
+ *  a crafted reason/provider/note from injecting extra ICS fields or events. */
+function icsEscape(value: string): string {
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/\r\n|\r|\n/g, "\\n")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,");
+}
+
 export async function upsertEvent(rec: CallRecord, tentative = false): Promise<void> {
   if (googleConfigured()) {
     const result = await createEvent(rec, tentative);
@@ -32,16 +43,24 @@ export async function upsertEvent(rec: CallRecord, tentative = false): Promise<v
 async function writeIcs(rec: CallRecord, tentative: boolean): Promise<void> {
   const slot = rec.chosenSlot;
   if (!slot) return;
+  // The local .ics fallback writes PHI in plaintext — only do it in dev. On
+  // serverless the filesystem is read-only anyway, so this just avoids a crash
+  // and avoids persisting PHI to disk in production.
+  if (process.env.NODE_ENV === "production") return;
+
   const status = tentative ? "TENTATIVE" : "CONFIRMED";
-  const summary = `${rec.request.reason} — ${rec.request.patient.name}`;
-  const desc = `At ${rec.request.providerName}. Provider: ${slot.provider ?? "TBD"}. ${slot.notes ?? ""}`.trim();
+  const summary = icsEscape(`${rec.request.reason} — ${rec.request.patient.name}`);
+  const desc = icsEscape(
+    `At ${rec.request.providerName}. Provider: ${slot.provider ?? "TBD"}. ${slot.notes ?? ""} ` +
+      `(time as offered: ${slot.startsAt})`.trim(),
+  );
   const block =
     "BEGIN:VEVENT\n" +
-    `UID:${rec.id}@appointment-scheduler\n` +
+    `UID:${icsEscape(rec.id)}@appointment-scheduler\n` +
     `SUMMARY:${summary}\n` +
     `STATUS:${status}\n` +
-    `DESCRIPTION:${desc} (time as offered: ${slot.startsAt})\n` +
-    `LOCATION:${slot.location ?? rec.request.providerName}\n` +
+    `DESCRIPTION:${desc}\n` +
+    `LOCATION:${icsEscape(slot.location ?? rec.request.providerName)}\n` +
     "END:VEVENT\n";
 
   await fs.mkdir(path.dirname(ICS), { recursive: true });

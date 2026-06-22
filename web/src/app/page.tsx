@@ -18,14 +18,15 @@ const URGENCY_LABEL: Record<string, string> = {
   urgent: "Urgent (ASAP)",
 };
 
-type Slot = { startsAt: string; provider?: string | null };
+// Mirrors the CallDTO returned by /api/calls (display-only, no PHI like DOB,
+// insurance, callback, or notes).
 type Call = {
   id: string;
   status: string;
-  request: { patient: { name: string }; providerName: string; reason: string };
-  chosenSlot?: Slot | null;
-  offeredSlots: Slot[];
-  transcriptSummary?: string | null;
+  providerName: string;
+  reason: string;
+  chosenSlot: { startsAt: string } | null;
+  transcriptSummary: string | null;
   updatedAt: string;
 };
 
@@ -472,7 +473,7 @@ export default function Home() {
                   return (
                     <div className="callcard" key={c.id}>
                       <div className="callcard-head">
-                        <div className="office">{c.request.providerName}</div>
+                        <div className="office">{c.providerName}</div>
                         <div className={`pill ${pillClass}`}>
                           <span className="dot" />
                           {STATUS_LABEL[c.status] ?? c.status}
@@ -506,7 +507,7 @@ export default function Home() {
                             <span className="lbl">Appointment booked</span>
                           </div>
                           <div className="booked-when">{c.chosenSlot.startsAt}</div>
-                          <div className="booked-reason">{c.request.reason}</div>
+                          <div className="booked-reason">{c.reason}</div>
                         </div>
                       )}
                     </div>

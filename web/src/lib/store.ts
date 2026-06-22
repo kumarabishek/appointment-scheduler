@@ -1,16 +1,19 @@
 /** Postgres-backed store for call records (Prisma + Neon).
  *
- * The full CallRecord is JSON-encoded into the `data` column with insurance
- * (PHI) fields AES-encrypted; denormalized columns (id, requestId, vapiCallId,
- * status) back the lookups. Works on serverless (unlike the old JSON file).
+ * The ENTIRE CallRecord JSON is AES-encrypted into the `data` column — name,
+ * DOB, callback, reason, notes, insurance, chosen slot, transcript summary, all
+ * of it (it's all sensitive for a medical scheduler). Only non-PHI denormalized
+ * columns (id, requestId, vapiCallId, status, userId) are stored in the clear,
+ * for lookups. Works on serverless (unlike the old JSON file).
  */
 import { decryptField, encryptField } from "./crypto";
 import { prisma } from "./db";
 import { CallRecord } from "./types";
 
-/** Return a copy of the record with insurance fields transformed (encrypt on
- *  the way to the DB, decrypt on the way back). Never mutates the input — callers
- *  keep the in-memory plaintext they need to place the call. */
+/** Return a copy with insurance fields transformed — kept only for backward
+ *  compat with LEGACY rows where the blob was plaintext but insurance was
+ *  field-encrypted. New rows encrypt the whole blob, so these are already
+ *  plaintext and decryptField is a no-op. */
 function mapInsurance(
   rec: CallRecord,
   fn: <T extends string | null | undefined>(v: T) => T,
@@ -29,9 +32,11 @@ function mapInsurance(
   };
 }
 
-/** Decode a stored row's JSON into a plaintext CallRecord. */
+/** Decode a stored row into a plaintext CallRecord. Decrypts the whole blob
+ *  (new format); the trailing mapInsurance handles legacy field-encrypted rows. */
 function fromRow(data: string): CallRecord {
-  return mapInsurance(CallRecord.parse(JSON.parse(data)), decryptField);
+  const json = decryptField(data);
+  return mapInsurance(CallRecord.parse(JSON.parse(json)), decryptField);
 }
 
 /** Save a call. `userId` (the owning Clerk user) is required when CREATING a
@@ -39,8 +44,8 @@ function fromRow(data: string): CallRecord {
  *  has no user session) omit it — the existing owner is preserved. */
 export async function save(record: CallRecord, userId?: string): Promise<void> {
   record.updatedAt = new Date().toISOString();
-  // Persist with insurance encrypted; the caller's object stays plaintext.
-  const data = JSON.stringify(mapInsurance(record, encryptField));
+  // Encrypt the entire record JSON at rest (all PHI, not just insurance).
+  const data = encryptField(JSON.stringify(record));
   const fields = {
     requestId: record.request.id,
     vapiCallId: record.vapiCallId ?? null,
@@ -91,4 +96,34 @@ export async function all(userId: string): Promise<CallRecord[]> {
     orderBy: { updatedAt: "desc" },
   });
   return rows.map((r) => fromRow(r.data));
+}
+
+/** Display-only view of a call for the dashboard. Deliberately omits DOB,
+ *  insurance, callback number, and notes — the UI never renders them, so they
+ *  stay server-side and never travel over the wire. */
+export type CallDTO = {
+  id: string;
+  status: string;
+  providerName: string;
+  reason: string;
+  chosenSlot: { startsAt: string } | null;
+  transcriptSummary: string | null;
+  updatedAt: string;
+};
+
+export function toDTO(rec: CallRecord): CallDTO {
+  return {
+    id: rec.id,
+    status: rec.status,
+    providerName: rec.request.providerName,
+    reason: rec.request.reason,
+    chosenSlot: rec.chosenSlot ? { startsAt: rec.chosenSlot.startsAt } : null,
+    transcriptSummary: rec.transcriptSummary ?? null,
+    updatedAt: rec.updatedAt,
+  };
+}
+
+/** DTOs for a user's calls — the only shape the dashboard endpoint should return. */
+export async function allDTO(userId: string): Promise<CallDTO[]> {
+  return (await all(userId)).map(toDTO);
 }

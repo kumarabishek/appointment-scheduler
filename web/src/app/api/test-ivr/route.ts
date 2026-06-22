@@ -8,12 +8,19 @@
  *
  * Returns TwiML (XML), not JSON.
  */
+import { NextResponse } from "next/server";
+import { config } from "@/lib/config";
 import { renderMenu, twimlResponse } from "@/lib/testIvr";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const menu = () => twimlResponse(renderMenu("main"));
+// Off unless explicitly enabled — this route is public and would otherwise leak
+// the operator number / act as a bridge to ring it.
+const menu = () =>
+  config.testIvrEnabled
+    ? twimlResponse(renderMenu("main"))
+    : NextResponse.json({ error: "not found" }, { status: 404 });
 
 export const GET = () => menu();
 export const POST = () => menu();

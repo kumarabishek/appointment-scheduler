@@ -52,5 +52,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "call failed", callId: record.id }, { status: 502 });
   }
 
-  return NextResponse.json({ record });
+  // Don't echo the full record (PHI). The UI refetches via /api/calls (DTOs).
+  return NextResponse.json({ ok: true, callId: record.id });
 }

@@ -4,7 +4,8 @@
  * the pressed key as `Digits`. The transition — descend to a submenu, connect
  * to the operator, or reprompt — lives in src/lib/testIvr.ts.
  */
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { config } from "@/lib/config";
 import { transition, twimlResponse } from "@/lib/testIvr";
 
 export const runtime = "nodejs";
@@ -19,6 +20,10 @@ async function digitsFrom(req: NextRequest): Promise<string> {
 }
 
 async function handle(req: NextRequest): Promise<Response> {
+  // Off unless explicitly enabled (this route is public and can dial the operator).
+  if (!config.testIvrEnabled) {
+    return NextResponse.json({ error: "not found" }, { status: 404 });
+  }
   const menuKey = req.nextUrl.searchParams.get("menu") ?? "main";
   const digit = await digitsFrom(req);
   return twimlResponse(transition(menuKey, digit));

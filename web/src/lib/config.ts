@@ -50,6 +50,12 @@ export const config = {
   // the scheduling option. Set to your own cell to role-play the scheduler.
   testOperatorPhone: env("TEST_OPERATOR_PHONE"),
 
+  // The fake test-IVR routes are a local dev harness. They're PUBLIC (Twilio is
+  // a machine), so they must be OFF by default — otherwise anyone could fetch
+  // the TwiML and learn/ring the operator number. Set TEST_IVR_ENABLED=true only
+  // while actively testing.
+  testIvrEnabled: env("TEST_IVR_ENABLED") === "true",
+
   // Public URL for inbound webhooks (ngrok in dev).
   publicBaseUrl: env("PUBLIC_BASE_URL").replace(/\/$/, ""),
 
