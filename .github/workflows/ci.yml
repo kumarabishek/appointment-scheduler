@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # Installs deps; postinstall runs `prisma generate` so the typecheck below
+      # sees the generated client. No database or secrets are needed.
+      - name: Install
+        run: npm ci
+
+      - name: Lint (incl. no-console PHI guard)
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: IVR navigation tests
+        run: npm run test:ivr
