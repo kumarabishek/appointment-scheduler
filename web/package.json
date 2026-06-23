@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev -p 8000",
     "dev:tunnel": "tsx scripts/dev-tunnel.ts",
-    "build": "prisma generate && next build",
+    "lint": "eslint .",
+    "build": "prisma generate && eslint . --max-warnings 0 && next build",
     "start": "next start -p 8000",
     "typecheck": "tsc --noEmit",
     "google-auth": "tsx scripts/google-auth.ts",
@@ -27,12 +28,15 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
     "@types/luxon": "^3.4.2",
     "@types/node": "^22.10.5",
     "@types/pg": "^8.20.0",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",
     "dotenv": "^16.4.5",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^15.5.19",
     "prisma": "^7.8.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
