@@ -10,6 +10,14 @@ export const dynamic = "force-dynamic";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** Normalize common formatting and require E.164, so a bad office number is
+ *  rejected here instead of failing (or dialing a short code) once the call is
+ *  placed. Returns null if it can't be a valid international number. */
+function normalizePhone(raw: string): string | null {
+  const cleaned = raw.replace(/[\s().-]/g, "");
+  return /^\+[1-9]\d{6,14}$/.test(cleaned) ? cleaned : null;
+}
+
 /** Create a booking request -> place the outbound call. */
 export async function POST(req: NextRequest) {
   // The owning user (middleware already requires a session; double-check here).
@@ -17,6 +25,8 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   // Abuse guard: cap calls per user per rolling 24h (each call costs money).
+  // Count-then-create has a small race under parallel requests; acceptable for
+  // a soft cost guard (a determined user gains at most a few extra calls).
   const recent = await store.countCallsSince(userId, new Date(Date.now() - DAY_MS));
   if (recent >= config.dailyCallLimit) {
     return NextResponse.json(
@@ -35,6 +45,15 @@ export async function POST(req: NextRequest) {
     // Don't echo the raw validation error (avoid leaking internals).
     return NextResponse.json({ error: "invalid request" }, { status: 400 });
   }
+
+  const phone = normalizePhone(request.providerPhone);
+  if (!phone) {
+    return NextResponse.json(
+      { error: "invalid office phone — use international format, e.g. +14155550123" },
+      { status: 400 },
+    );
+  }
+  request.providerPhone = phone;
 
   const record = CallRecord.parse({ request });
   await store.save(record, userId); // save first so the webhook can find it mid-call

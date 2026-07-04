@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { config } from "@/lib/config";
 import { dispatchTool } from "@/lib/booking";
@@ -36,19 +37,31 @@ async function recordFor(msg: VapiMsg): Promise<CallRecord | null> {
   return rec;
 }
 
+/** args === null means the model sent unparseable JSON — don't dispatch (a
+ *  tool like decide_and_book would misread {} as "no slots"); tell it to retry. */
 function* iterToolCalls(msg: VapiMsg) {
   const list = msg.toolCalls ?? msg.toolCallList;
   if (list) {
     for (const tc of list) {
-      const args =
-        typeof tc.function?.arguments === "string"
-          ? JSON.parse(tc.function.arguments)
-          : (tc.function?.arguments ?? {});
+      let args: unknown = tc.function?.arguments ?? {};
+      if (typeof args === "string") {
+        try {
+          args = JSON.parse(args);
+        } catch {
+          args = null;
+        }
+      }
       yield { id: tc.id, name: tc.function?.name ?? "", args };
     }
   } else if (msg.functionCall) {
     yield { id: undefined, name: msg.functionCall.name ?? "", args: msg.functionCall.parameters ?? {} };
   }
+}
+
+/** Constant-time compare (hash both sides to fixed length first). */
+function secretMatches(given: string, expected: string): boolean {
+  const h = (s: string) => createHash("sha256").update(s).digest();
+  return timingSafeEqual(h(given), h(expected));
 }
 
 export async function POST(req: NextRequest) {
@@ -58,7 +71,7 @@ export async function POST(req: NextRequest) {
   if (!config.vapiWebhookSecret) {
     return NextResponse.json({ error: "webhook not configured" }, { status: 503 });
   }
-  if ((req.headers.get("x-vapi-secret") ?? "") !== config.vapiWebhookSecret) {
+  if (!secretMatches(req.headers.get("x-vapi-secret") ?? "", config.vapiWebhookSecret)) {
     return NextResponse.json({ error: "bad webhook secret" }, { status: 401 });
   }
 
@@ -69,19 +82,33 @@ export async function POST(req: NextRequest) {
   if (msg.type === "tool-calls" || msg.type === "function-call") {
     const results = [];
     for (const tc of iterToolCalls(msg)) {
-      const result = await dispatchTool(rec, tc.name, tc.args as Record<string, unknown>);
+      const result =
+        tc.args === null
+          ? "Invalid tool arguments (bad JSON). Call the tool again with valid arguments."
+          : await dispatchTool(rec, tc.name, tc.args as Record<string, unknown>);
       results.push({ toolCallId: tc.id, result });
     }
     return NextResponse.json({ results });
   }
 
   if (msg.type === "end-of-call-report" && rec) {
-    if (rec.status === "pending" || rec.status === "awaiting_confirmation") {
+    // "confirmed" means a slot was approved but finalize_booking never came —
+    // the call dropped mid-booking. Without this it shows "Booking…" forever.
+    if (
+      rec.status === "pending" ||
+      rec.status === "awaiting_confirmation" ||
+      rec.status === "confirmed"
+    ) {
+      const midBooking = rec.status === "confirmed";
       rec.status = "failed";
-      rec.transcriptSummary = msg.analysis?.summary ?? "Call ended without a confirmed booking.";
+      rec.transcriptSummary =
+        msg.analysis?.summary ??
+        (midBooking
+          ? "Call ended before the booking was finalized — call the office to check."
+          : "Call ended without a confirmed booking.");
       await store.save(rec);
       await sendInfo(
-        "❓ Call ended without a booking",
+        midBooking ? "❓ Call dropped mid-booking" : "❓ Call ended without a booking",
         "Open the app to review and maybe call back.",
       );
     }

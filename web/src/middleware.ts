@@ -4,12 +4,15 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 //  - /api/webhooks/vapi  → Vapi's servers call this mid-call; a machine can't
 //    log in. It enforces its own x-vapi-secret instead.
 //  - /api/test-ivr(.*)   → the fake test IVR is hit by Twilio (also a machine).
+//  - /api/decide         → the ntfy app POSTs the push-button URL with no
+//    session; it enforces its own signed per-call token (decideToken.ts).
 //  - /sign-in, /sign-up  → the auth pages themselves.
-// Everything else (the UI + /api/requests, /api/calls, /api/decide) requires
-// a signed-in Clerk user.
+// Everything else (the UI + /api/requests, /api/calls) requires a signed-in
+// Clerk user.
 const isPublic = createRouteMatcher([
   "/api/webhooks/vapi",
   "/api/test-ivr(.*)",
+  "/api/decide",
   "/sign-in(.*)",
   "/sign-up(.*)",
 ]);

@@ -11,7 +11,7 @@ export const config = {
 
   // LLM brain — provider key lives in the Vapi dashboard, not here.
   llmProvider: env("LLM_PROVIDER", "google"),
-  model: env("AGENT_MODEL", "gemini-2.0-flash"),
+  model: env("AGENT_MODEL", "gemini-2.5-flash"),
 
   // Voice (TTS) — ElevenLabs, key in the Vapi dashboard.
   voiceProvider: env("VOICE_PROVIDER", "11labs"),
@@ -36,9 +36,9 @@ export const config = {
   // Each call is billed to your Vapi/LLM account, so cap it.
   dailyCallLimit: Number(env("DAILY_CALL_LIMIT", "3")),
 
-  // Secret used to encrypt PHI (insurance details) at rest in data/calls.json.
-  // Any string works; generate a strong one, e.g. `openssl rand -base64 32`.
-  // Leave empty in dev to store unencrypted (do NOT do that with real PHI).
+  // Secret used to encrypt the entire call record (PHI) at rest in Postgres,
+  // and to sign the tap-to-approve decide links (decideToken.ts). Generate a
+  // strong one, e.g. `openssl rand -base64 32`. Required to store anything.
   phiEncryptionKey: env("PHI_ENCRYPTION_KEY"),
 
   // Vapi HIPAA mode: when on, Vapi stores no recordings/transcripts. Defaults

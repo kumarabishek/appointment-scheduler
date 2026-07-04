@@ -1,4 +1,4 @@
-/** Field-level encryption for PHI at rest (insurance details).
+/** Encryption for PHI at rest (the entire call record JSON; see store.ts).
  *
  * Uses AES-256-GCM with a key derived from PHI_ENCRYPTION_KEY. Encrypted values
  * are tagged with a version prefix so we can tell plaintext from ciphertext and

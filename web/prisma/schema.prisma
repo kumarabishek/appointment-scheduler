@@ -1,7 +1,7 @@
 // Prisma schema for the Appointment Scheduler.
 // Postgres (Neon in production; use the same DATABASE_URL locally).
-// The full CallRecord is stored as a JSON String in `data` (insurance fields
-// encrypted), with denormalized columns for the lookups the app needs.
+// The full CallRecord JSON is AES-encrypted into `data` (it's all PHI), with
+// denormalized non-PHI columns for the lookups the app needs.
 
 generator client {
   provider = "prisma-client"
@@ -12,15 +12,15 @@ datasource db {
   provider = "postgresql"
 }
 
-/// One booking call. `data` holds the JSON-encoded CallRecord (insurance fields
-/// AES-encrypted); the columns mirror fields we query by.
+/// One booking call. `data` holds the AES-encrypted JSON-encoded CallRecord;
+/// the columns mirror fields we query by.
 model Call {
   id         String   @id
   userId     String // Clerk user who owns this call — scopes all reads
   requestId  String   @unique // CallRecord.request.id
   vapiCallId String?  @unique // set once the outbound call is placed
   status     String   @default("pending")
-  data       String // JSON-encoded CallRecord (PHI fields encrypted)
+  data       String // AES-encrypted JSON-encoded CallRecord (all PHI)
   // Tap-to-approve: /api/decide writes the owner's choice here; the webhook
   // (a separate serverless invocation) polls for it. Null = no decision yet.
   decision   String?

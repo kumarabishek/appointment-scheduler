@@ -66,13 +66,14 @@ you get a push to add it manually — the agent never guesses a calendar time.
 - `POST /api/requests` — create a booking → places the Vapi call
 - `GET  /api/calls` — list call records (the dashboard polls this)
 - `POST /api/webhooks/vapi` — Vapi tool calls (decide_and_book / finalize / escalate)
-- `GET|POST /api/decide?call=&choice=` — your ntfy tap resolves a live decision
+- `POST /api/decide?call=&choice=&token=` — your ntfy tap resolves a live decision
+  (authorized by the signed per-call token in the push-button URL)
 
 ## Notes / caveats
 
-- The live-hold decision registry (`decisions.ts`) is **in-memory**, so it works
-  in a single Node process (`next dev` or self-hosted `next start`). For
-  serverless/multi-instance, back it with Redis pub/sub.
+- The live-hold decision registry (`decisions.ts`) is **DB-backed**: your tap
+  writes to the call's `decision` column and the webhook invocation polls for it
+  (~1 read/sec while holding), so it works across serverless instances.
 - Spoken-time parsing (`matching.ts`) is best-effort via chrono-node; unparseable
   slots safely fall through to asking you rather than guessing.
 - Same compliance caveats as the Python version apply: AI disclosure, call-

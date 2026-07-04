@@ -26,8 +26,7 @@ async function main() {
   }
   const data = JSON.parse(text);
   console.log("✓ Call placed.");
-  console.log(`  record:   ${data.record?.id}`);
-  console.log(`  vapiCall: ${data.record?.vapiCallId}`);
+  console.log(`  record:   ${data.callId}`);
   console.log("  Watch it in the Vapi dashboard → Logs (needs HIPAA_MODE=false).");
 }
 

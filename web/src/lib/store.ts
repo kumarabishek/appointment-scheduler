@@ -52,12 +52,18 @@ export async function save(record: CallRecord, userId?: string): Promise<void> {
     status: record.status,
     data,
   };
-  await prisma.call.upsert({
-    where: { id: record.id },
-    // userId only set on create; updates never change ownership.
-    create: { id: record.id, userId: userId ?? "", ...fields },
-    update: fields,
-  });
+  if (userId) {
+    await prisma.call.upsert({
+      where: { id: record.id },
+      // userId only set on create; updates never change ownership.
+      create: { id: record.id, userId, ...fields },
+      update: fields,
+    });
+  } else {
+    // No user (webhook path): update only. Never create an owner-less record —
+    // a row nobody can see or rate-limit against.
+    await prisma.call.update({ where: { id: record.id }, data: fields });
+  }
 }
 
 /** How many calls a user has created since `since` (for rate limiting). */

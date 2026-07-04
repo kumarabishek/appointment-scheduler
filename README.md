@@ -47,6 +47,13 @@ only pinging you if nothing fits.
   - Vapi **HIPAA mode** (no stored recordings/transcripts), fail-closed webhook
     auth, per-user daily rate limit, and a `no-console` lint guard so PHI can't
     leak into logs.
+  - Tap-to-approve links are **signed per-call HMAC tokens** (the push app has
+    no session), scoped to one choice on one call and expiring in minutes.
+
+  > Auth and data are fully per-user, but the ntfy push topic and the Google
+  > Calendar account are single global settings — a deployment serves **one
+  > person/household**. Per-user topics and per-user Google OAuth are the known
+  > follow-up for true multi-tenant use.
 - ⚡ **Serverless-ready** — Next.js App Router on Vercel, Postgres (Neon) via Prisma.
 
 ## Architecture

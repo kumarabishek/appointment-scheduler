@@ -31,7 +31,10 @@ export const AppointmentRequest = z.object({
   id: z.string().default(() => id("req")),
   patient: Patient,
   providerName: z.string().min(1),
-  providerPhone: z.string().min(1), // E.164, e.g. +14155550123
+  // E.164, e.g. +14155550123. Enforced at the API boundary (see
+  // normalizePhone in /api/requests), not here — this schema also re-parses
+  // stored records, which must never start failing on old data.
+  providerPhone: z.string().min(1),
   reason: z.string().min(1),
   // IANA zone the office's spoken times are in (= where the clinic is).
   // Auto-detected from the booker's browser; editable for out-of-zone bookings.

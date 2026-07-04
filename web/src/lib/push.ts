@@ -6,12 +6,20 @@
  * 3 buttons, so we show up to 2 slots + Decline.
  */
 import { config, requireConfig } from "./config";
+import { mintDecideToken } from "./decideToken";
 import { CallRecord, OfferedSlot } from "./types";
 
 const MAX_SLOT_BUTTONS = 2;
 
+/** Button URL for one choice. The ntfy app POSTs this with no cookies/session,
+ *  so authorization travels IN the URL: a signed token scoped to exactly this
+ *  call + choice, expiring shortly. See decideToken.ts. */
 function decideUrl(callId: string, choice: string): string {
-  const qs = new URLSearchParams({ call: callId, choice }).toString();
+  const qs = new URLSearchParams({
+    call: callId,
+    choice,
+    token: mintDecideToken(callId, choice),
+  }).toString();
   return `${config.publicBaseUrl}/api/decide?${qs}`;
 }
 
