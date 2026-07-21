@@ -36,7 +36,11 @@ export function parseSlot(
     },
     { zone },
   );
-  return dt.isValid ? dt : null;
+  // chrono's forwardDate does NOT roll a bare time ("9:30 AM") past "now" — it
+  // resolves to TODAY 9:30 even when that's already gone. A past instant is
+  // never bookable, and a time with no date is ambiguous anyway: treat it as
+  // unparseable so it falls back to human review instead of auto-booking.
+  return dt.isValid && dt >= ref ? dt : null;
 }
 
 function inWindow(dt: DateTime, w: TimeWindow): boolean {
@@ -75,6 +79,27 @@ export function pickBest(
   if (!candidates.length) return null;
   candidates.sort((a, b) => a[1].toMillis() - b[1].toMillis());
   return candidates[0][0];
+}
+
+/** Did the finalized slot drift from the approved one (beyond tolerance) AND
+ *  land outside the green zone? That's the case worth flagging for review:
+ *  small shifts and in-window changes are fine; an unverifiable or out-of-zone
+ *  change is not. Unparseable/missing times count as drifted — we can't verify,
+ *  so we flag. */
+export function driftedOutsideZone(
+  finalizedText: string,
+  approvedText: string | null | undefined,
+  windows: TimeWindow[],
+  zone: string,
+  toleranceMinutes = 5,
+): boolean {
+  const finalized = parseSlot(finalizedText, zone);
+  const approved = approvedText ? parseSlot(approvedText, zone) : null;
+  const drifted =
+    !finalized ||
+    !approved ||
+    Math.abs(finalized.toMillis() - approved.toMillis()) > toleranceMinutes * 60_000;
+  return drifted && !(finalized && inGreenZone(finalized, windows));
 }
 
 /** Soonest offered slot regardless of green zone (used by 'closest' fallback). */

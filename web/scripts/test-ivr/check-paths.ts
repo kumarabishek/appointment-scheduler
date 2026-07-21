@@ -6,7 +6,7 @@
  * right submenu / connect / hangup, invalid keys reprompt, and the expected
  * multi-level sequences actually reach a scheduler. Exits non-zero on failure.
  */
-import { MENUS, transition } from "../../src/lib/testIvr";
+import { MENUS, renderMenu, transition } from "../../src/lib/testIvr";
 
 let passed = 0;
 let failed = 0;
@@ -33,13 +33,33 @@ function checkTransitions() {
   ok("main 5 → invalid reprompt", has("main", "5", "isn't a valid option") && has("main", "5", "menu=main"));
 
   ok("appointments 1 → new submenu", has("appointments", "1", "menu=new"));
-  ok("appointments 2 → connect (hold)", has("appointments", "2", "Please hold"));
+  ok("appointments 2 → DOB gate", has("appointments", "2", "menu=dob"));
   ok("appointments 3 → connect (hold)", has("appointments", "3", "Please hold"));
   ok("appointments 9 → back to main", has("appointments", "9", "menu=main"));
 
   ok("new 1 → connect (hold)", has("new", "1", "Please hold"));
   ok("new 2 → connect (hold)", has("new", "2", "Please hold"));
   ok("new 9 → back to appointments", has("new", "9", "menu=appointments"));
+
+  // DOB gate: collects 8 digits; only the test patient's MMDDYYYY advances.
+  ok("dob gathers 8 digits", renderMenu("dob").includes('numDigits="8"'));
+  ok("dob correct entry → callback offer", has("dob", "01011990", "menu=callback"));
+  ok(
+    "dob wrong entry → reprompt",
+    has("dob", "12345678", "does not match our records") &&
+      has("dob", "12345678", "menu=dob"),
+  );
+
+  // Callback offer: pressing 1 is the wrong move (call ends, no booking);
+  // silence times out into hold → operator.
+  ok(
+    "callback 1 → accepted + hangup (failure path)",
+    has("callback", "1", "receive a callback") && has("callback", "1", "<Hangup/>"),
+  );
+  ok(
+    "callback silence → hold → operator",
+    renderMenu("callback").includes("Please hold for the next available scheduler"),
+  );
 }
 
 /** Walk the tree by digits, mirroring the runtime transitions. */
@@ -60,7 +80,15 @@ function checkSequences() {
   const reaches = (digits: string[], terminal: string) => walk(digits).terminal === terminal;
   const lands = (digits: string[], menu: string) => walk(digits).menu === menu;
 
-  ok("checkup 1→2 reaches operator", reaches(["1", "2"], "CONNECT"));
+  ok("existing patient 1→2 reaches DOB gate", lands(["1", "2"], "dob"));
+  ok(
+    "existing patient 1→2→DOB reaches callback offer",
+    lands(["1", "2", "01011990"], "callback"),
+  );
+  ok(
+    "accepting the callback ends the call (failure path)",
+    lands(["1", "2", "01011990", "1"], "callback_accepted"),
+  );
   ok("lab 1→3 reaches operator", reaches(["1", "3"], "CONNECT"));
   ok("new primary 1→1→1 reaches operator", reaches(["1", "1", "1"], "CONNECT"));
   ok("new specialist 1→1→2 reaches operator", reaches(["1", "1", "2"], "CONNECT"));
@@ -78,6 +106,8 @@ function checkIntegrity() {
         dangling += ` ${key}:${digit}→${target}`;
       }
     }
+    const t = menu.timeoutTarget;
+    if (t && t !== "CONNECT" && !MENUS[t]) dangling += ` ${key}:timeout→${t}`;
   }
   ok("no dangling menu targets", dangling === "", `dangling:${dangling}`);
 }

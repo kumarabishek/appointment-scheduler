@@ -34,3 +34,6 @@ jobs:
 
       - name: IVR navigation tests
         run: npm run test:ivr
+
+      - name: Slot matching & drift tests
+        run: npm run test:matching

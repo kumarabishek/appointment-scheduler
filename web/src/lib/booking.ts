@@ -5,7 +5,7 @@
 import { upsertEvent } from "./calendar";
 import { config } from "./config";
 import { isPending, waitForDecision } from "./decisions";
-import { earliestOverall, inGreenZone, parseSlot, pickBest } from "./matching";
+import { driftedOutsideZone, earliestOverall, parseSlot, pickBest } from "./matching";
 import { sendDecisionRequest, sendInfo } from "./push";
 import * as store from "./store";
 import { CallRecord, OfferedSlot } from "./types";
@@ -207,15 +207,12 @@ async function finalizeBooking(rec: CallRecord, args: Args): Promise<string> {
       location: s.location,
       notes: s.notes,
     });
-    const finalizedAt = parseSlot(finalized.startsAt, zone);
-    const approvedAt = rec.chosenSlot ? parseSlot(rec.chosenSlot.startsAt, zone) : null;
-    const drifted =
-      !finalizedAt ||
-      !approvedAt ||
-      Math.abs(finalizedAt.toMillis() - approvedAt.toMillis()) > 5 * 60 * 1000;
-    driftedOutOfZone =
-      drifted &&
-      !(finalizedAt && inGreenZone(finalizedAt, rec.request.acceptableWindows));
+    driftedOutOfZone = driftedOutsideZone(
+      finalized.startsAt,
+      rec.chosenSlot?.startsAt,
+      rec.request.acceptableWindows,
+      zone,
+    );
     rec.chosenSlot = finalized;
   }
   rec.status = "booked";
