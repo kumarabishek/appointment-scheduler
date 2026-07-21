@@ -70,10 +70,16 @@ function checkParseSlot() {
     String(tue),
   );
 
-  // ref is noon — a bare "9:30 AM" resolves to TODAY 9:30, already in the
-  // past. Past instants must never be auto-bookable (chrono's forwardDate
-  // doesn't roll bare times forward), so parseSlot rejects them.
-  ok("time already in the past → null (human review)", parseSlot("9:30 AM", ZONE, REF) === null);
+  // ref is noon — a bare "9:30 AM" already happened today. With the zone-aware
+  // chrono reference, forwardDate rolls it to TOMORROW 9:30 (next occurrence),
+  // never a past instant. (The parseSlot >= ref guard still rejects explicit
+  // past dates below.)
+  const rolled = parseSlot("9:30 AM", ZONE, REF);
+  ok(
+    "time already past today rolls forward to tomorrow",
+    !!rolled && rolled.toISODate() === "2030-06-11" && rolled.hour === 9,
+    String(rolled),
+  );
   ok("explicit past date → null (human review)", parseSlot("Jan 5 2020 at 9:30 AM", ZONE, REF) === null);
   ok(
     "bare time still in the future today parses",

@@ -23,7 +23,15 @@ export function parseSlot(
   zone: string,
   ref: DateTime = DateTime.now().setZone(zone),
 ): DateTime | null {
-  const results = chrono.parse(text, ref.toJSDate(), { forwardDate: true });
+  // Give chrono the reference WITH the office zone's offset: a bare Date ref
+  // is interpreted in the SERVER's local zone, so implied days / forwardDate
+  // would shift with where the code runs (Vercel = UTC ≠ the office's "today"
+  // in the evening). The offset pins "today" to the office's wall clock.
+  const results = chrono.parse(
+    text,
+    { instant: ref.toJSDate(), timezone: ref.offset },
+    { forwardDate: true },
+  );
   if (!results.length) return null;
   const c = results[0].start;
   const dt = DateTime.fromObject(
