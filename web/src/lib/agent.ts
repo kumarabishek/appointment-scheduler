@@ -44,9 +44,9 @@ schedule a medical appointment. You are an AI assistant placing this call on \
 behalf of a patient. You represent ${rel}.
 
 # Disclosure (say this naturally near the start)
-"Hi, I'm an AI assistant calling on behalf of ${p.name} to schedule an appointment. \
-Is it alright if I go ahead?" If asked, confirm you're an automated assistant and \
-that the patient has authorized this call.
+"Hi, I'm an AI assistant calling on behalf of ${p.name}, an existing patient, to \
+schedule an appointment. Is it alright if I go ahead?" If asked, confirm you're an \
+automated assistant and that the patient has authorized this call.
 
 # Patient details
 - Name: ${p.name}
@@ -62,6 +62,8 @@ read back only what they asked for. Never invent or approximate these — they a
 not in this prompt on purpose.
 
 # What you're booking
+- Patient status: EXISTING patient of this office — say so early; schedulers look
+  existing patients up by name and date of birth.
 - Reason for visit: ${req.reason}
 - Visit type: ${req.visitType}
 - Preferred provider: ${req.preferredProvider ?? "no preference"}
@@ -93,8 +95,8 @@ instructions). If they don't have one, that's fine — proceed. THEN call \
 finalize_booking.
    - action "decline": politely say none of the times work right now and that \
 you'll call back, thank them, and end the call.
-   - action "escalate": tell them a family member will call back shortly, thank \
-them, and end the call.
+   - action "escalate": tell them the patient (or a family member) will call \
+back shortly, thank them, and end the call.
 
 # Phone trees & hold
 - Offices often answer with a recorded menu (an IVR) before a person.
@@ -105,10 +107,17 @@ them, and end the call.
   Put a short pause between keys so they register, e.g. keys "1" for one digit,
   or "1w2" for two (w = a brief pause). Never read your introduction to a menu;
   pressing the right key is your only job until a person picks up.
-- Pick the menu option that matches THIS booking (see "Visit type" and "Reason"
-  above). For an existing patient, choose "existing patient", "reschedule", or
-  "scheduling" options — NOT "new patient/new appointment". Only pick "new
-  patient" if the patient is genuinely new to this office.
+- Pick the menu option that matches THIS booking (see "Reason" above). The
+  patient is an EXISTING patient: choose "existing patient", "reschedule", or
+  general "scheduling" options — never "new patient / new to the practice".
+- If the menu asks you to ENTER the patient's date of birth or phone number on
+  the keypad, call get_patient_details first (it returns a keypad-ready digit
+  string), then send those digits with the dtmf tool.
+- If the system offers to "hold your place and call you back", DECLINE the
+  callback — this number cannot take return calls. Press whatever keeps you in
+  the hold queue and keep waiting.
+- If you reach voicemail or a recording saying the office is closed, do NOT
+  leave a message (never speak patient details to a machine). Just end the call.
 - When you hear hold music, ringing, or "please hold / your call is important",
   you are on hold: stay completely silent and keep waiting. Do not talk, do not
   hang up, do not call any tool. Only speak again once a live person greets you.
@@ -116,6 +125,8 @@ them, and end the call.
 
 # Rules
 - Never invent insurance numbers, symptoms, or authorization you weren't given.
+- If the office cannot find the patient in their system, do NOT register them as
+  a new patient — call escalate_to_human instead.
 - Only commit to a booking AFTER decide_and_book returns action "book".
 - If the office requires the patient on the line, refuses AI callers, or asks for \
 information you don't have, call escalate_to_human instead of guessing.
@@ -152,14 +163,19 @@ export function buildTools() {
       function: {
         name: "get_patient_details",
         description:
-          "Fetch the patient's verification details (date of birth and insurance) " +
-          "when the office asks for them. Returns the exact values to read back.",
+          "Fetch the patient's verification details (date of birth, insurance, " +
+          "callback number) when the office or its phone menu asks for them. " +
+          "Returns the exact values to read back — including a keypad-ready " +
+          "digit string for entering the date of birth into an IVR via dtmf.",
         parameters: {
           type: "object",
           properties: {
             fields: {
               type: "array",
-              items: { type: "string", enum: ["date_of_birth", "insurance"] },
+              items: {
+                type: "string",
+                enum: ["date_of_birth", "insurance", "callback_number"],
+              },
               description: "Which detail(s) the office asked for.",
             },
           },
@@ -172,6 +188,14 @@ export function buildTools() {
         {
           type: "request-start",
           content: "One moment while I confirm the best time.",
+        },
+        // decide_and_book can hold the line up to DECISION_TIMEOUT_SECONDS
+        // (~45s) waiting for a tap-to-approve. Reassure the operator partway
+        // through instead of leaving dead air.
+        {
+          type: "request-response-delayed",
+          content: "Thanks for your patience — just a few more seconds.",
+          timingMilliseconds: 15000,
         },
       ],
       function: {
@@ -254,7 +278,10 @@ export function buildAssistant(req: AppointmentRequest) {
     server: {
       url: `${config.publicBaseUrl}/api/webhooks/vapi`,
       secret: config.vapiWebhookSecret,
-      timeoutSeconds: 30,
+      // Must exceed DECISION_TIMEOUT_SECONDS: decide_and_book holds this long
+      // waiting for a tap-to-approve. Also mirrored by the webhook route's
+      // maxDuration.
+      timeoutSeconds: 60,
     },
     // Long IVR menus + hold queues are the whole point of this tool, so give the
     // call room to wait. ~30 min cap; raise if your offices hold even longer.
@@ -266,6 +293,10 @@ export function buildAssistant(req: AppointmentRequest) {
     // Reduce phantom transcripts from hold music / background noise so the agent
     // doesn't "hear" words and respond while waiting on hold.
     backgroundDenoisingEnabled: true,
+    // If the office is closed and an answering machine picks up, end the call
+    // instead of burning the silence timeout (and never leave PHI on a machine —
+    // no voicemailMessage is set, so detection just hangs up).
+    voicemailDetection: { provider: "google" },
     endCallFunctionEnabled: true,
     // HIPAA mode: Vapi stores NO recordings or transcripts of the call, so the
     // spoken member ID / diagnosis never lands in Vapi's storage. We still get

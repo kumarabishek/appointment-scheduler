@@ -26,11 +26,14 @@ export const config = {
   ntfyTopic: env("NTFY_TOPIC"),
 
   // How long the agent holds the operator while waiting for your tap (ms).
-  // Must be < the Vapi tool server timeout (set to 30s in agent.ts).
-  decisionTimeoutMs: Number(env("DECISION_TIMEOUT_SECONDS", "25")) * 1000,
+  // Must be < the Vapi tool server timeout (60s in agent.ts) and the webhook
+  // route's maxDuration, with margin for the booking work after the tap.
+  decisionTimeoutMs: Number(env("DECISION_TIMEOUT_SECONDS", "45")) * 1000,
 
   // Edge-case fallback when you don't tap in time: "closest" | "decline".
-  edgeFallback: env("EDGE_FALLBACK", "closest"),
+  // Defaults to "decline": auto-booking a time you explicitly said doesn't fit
+  // is surprising, so booking the closest anyway is opt-in.
+  edgeFallback: env("EDGE_FALLBACK", "decline"),
 
   // Per-user abuse guard: max outbound calls a user can place per rolling 24h.
   // Each call is billed to your Vapi/LLM account, so cap it.

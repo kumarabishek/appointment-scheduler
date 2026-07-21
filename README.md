@@ -11,6 +11,10 @@ You fill in who it's for, where to call, and when works. The agent dials out,
 handles the conversation live, and books a slot inside your pre-set window —
 only pinging you if nothing fits.
 
+Scoped to **existing patients** (the office already has the patient on file).
+New-patient registration is a different, longer call — the agent escalates to
+you rather than attempt it.
+
 ![Appointment Scheduler UI](docs/screenshot.png)
 
 > **Note for reviewers:** the live app is gated behind sign-in (it handles

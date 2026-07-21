@@ -14,7 +14,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { config } from "./config";
 
 // Long enough to notice the push and tap; the live decision window itself is
-// ~25s, and /api/decide independently checks the call is still pending.
+// ~45s, and /api/decide independently checks the call is still pending.
 const TTL_MS = 10 * 60 * 1000;
 
 function sign(callId: string, choice: string, exp: number): string {

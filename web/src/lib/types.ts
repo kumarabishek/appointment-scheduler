@@ -39,7 +39,10 @@ export const AppointmentRequest = z.object({
   // IANA zone the office's spoken times are in (= where the clinic is).
   // Auto-detected from the booker's browser; editable for out-of-zone bookings.
   timezone: z.string().nullish(),
-  visitType: z.string().default("new or existing — let office decide"),
+  // Scoped to existing patients: the office already has the patient on file.
+  // New-patient registration (address, PCP, referral, …) is a different call
+  // this agent deliberately doesn't attempt — it escalates instead.
+  visitType: z.string().default("existing patient"),
   preferredProvider: z.string().nullish(),
   acceptableWindows: z.array(TimeWindow).default([]),
   urgency: z.enum(["routine", "soon", "urgent"]).default("routine"),

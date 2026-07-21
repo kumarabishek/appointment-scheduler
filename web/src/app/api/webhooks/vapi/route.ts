@@ -8,10 +8,10 @@ import { CallRecord } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-// The decide_and_book tool can hold the line up to DECISION_TIMEOUT_SECONDS (~25s)
-// polling the DB for your tap-to-approve. Allow the function room to wait.
-// NOTE: Vercel Hobby caps functions at 10s — needs Pro, or lower the timeout.
-export const maxDuration = 30;
+// The decide_and_book tool can hold the line up to DECISION_TIMEOUT_SECONDS (~45s)
+// polling the DB for your tap-to-approve. Allow the function room to wait; must
+// cover the Vapi tool server timeout (60s in agent.ts).
+export const maxDuration = 60;
 
 type VapiMsg = {
   type?: string;
