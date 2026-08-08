@@ -88,7 +88,12 @@ menu; `9` goes back up a level.
   8 DOB digits (never guessed — the DOB isn't in its prompt)
 - at the callback offer: **no keypress** — it declines the callback by waiting
 - the agent **silent during hold music** (no phantom replies)
-- it **restarts its disclosure** when you (the operator) answer
+- when you (the operator) answer: it **waits out your full greeting** — try
+  answering with "Wellness Partners, can I get the patient's name and date of
+  birth?" and check it answers the question instead of talking over you or
+  launching a monologue
+- it does **not** volunteer that it's an AI — but ask it "am I talking to a
+  robot?" and it must answer honestly (that's the rule that must never break)
 
 ## Tuning knobs
 
