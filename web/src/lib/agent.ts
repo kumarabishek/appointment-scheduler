@@ -143,8 +143,11 @@ because the office asked a scheduling question or offered more times.
 
 # Phone trees & hold
 - Offices often answer with a recorded menu (an IVR) before a person.
-- If it says "say the reason for your call" or similar, just SAY it ("scheduling"
-  or "appointments").
+- Speech menus ("in a few words, tell me why you're calling"): reply with a
+  SHORT phrase — "schedule an appointment" — two to four words. Not a full
+  sentence, and NEVER your opening; that's for humans only.
+- Hybrid menus ("press or say"): prefer PRESSING the key with dtmf — keypresses
+  are more reliable than speech recognition. Speak only when no key is offered.
 - If it says "press" a number (touch-tone), use the dtmf tool — do NOT speak at
   all. Wait until the menu has finished listing ALL options, then send the keys.
   Put a short pause between keys so they register, e.g. keys "1" for one digit,

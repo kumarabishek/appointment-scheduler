@@ -50,6 +50,10 @@ Agent (Vapi)  ──calls──▶  Twilio number  ──fetches TwiML──▶ 
 ## The menu tree (multi-level)
 
 ```
+main (SPEECH-FIRST: "in a few words, tell me the reason for your call…")
+     ├─ say "schedule / appointment / checkup / lab" ▶ appointments
+     ├─ say "billing" ▶ billing (closed, hangs up)
+     ├─ unrecognized speech ▶ "didn't catch that" reprompt
 main ─ 1 ▶ appointments ─ 1 ▶ new ─ 1 ▶ primary care ──▶ HOLD ▶ operator
      │                  │         └─ 2 ▶ specialist  ──▶ HOLD ▶ operator
      │                  │         └─ 9 ▶ back to appointments
@@ -82,6 +86,9 @@ menu; `9` goes back up a level.
 
 ## What to watch for (Vapi dashboard → Logs)
 
+- at the speech-first main menu: a **short spoken phrase** ("schedule an
+  appointment", 2-4 words — not a sentence, not its opening) OR a `1`
+  keypress; both are correct since the menu is hybrid, but keys are preferred
 - a **sequence** of `dtmf` tool calls (e.g. `"1"` then `"2"`) matching the table
 - the agent **waits for each menu to finish** before pressing
 - at the DOB gate: a `get_patient_details` call **before** the `dtmf` with the

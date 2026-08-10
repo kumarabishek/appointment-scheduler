@@ -60,6 +60,23 @@ function checkTransitions() {
     "callback silence → hold → operator",
     renderMenu("callback").includes("Please hold for the next available scheduler"),
   );
+
+  // Speech-driven main menu (hybrid: speech + DTMF both accepted).
+  const say = (menu: string, phrase: string, needle: string) =>
+    transition(menu, "", phrase).includes(needle);
+  ok("main gather is hybrid (speech dtmf)", renderMenu("main").includes('input="speech dtmf"'));
+  ok(
+    'speech "schedule an appointment" → appointments',
+    say("main", "I'd like to schedule an appointment", "menu=appointments"),
+  );
+  ok('speech "annual checkup" → appointments', say("main", "an annual checkup please", "menu=appointments"));
+  ok('speech "billing question" → billing hangup', say("main", "a billing question", "<Hangup/>"));
+  ok(
+    "unrecognized speech → didn't-catch reprompt",
+    say("main", "I want to order a pizza", "didn't catch that") &&
+      say("main", "I want to order a pizza", "menu=main"),
+  );
+  ok("digits still win on the hybrid menu", has("main", "1", "menu=appointments"));
 }
 
 /** Walk the tree by digits, mirroring the runtime transitions. */
@@ -108,6 +125,11 @@ function checkIntegrity() {
     }
     const t = menu.timeoutTarget;
     if (t && t !== "CONNECT" && !MENUS[t]) dangling += ` ${key}:timeout→${t}`;
+    for (const [fragment, target] of Object.entries(menu.speech ?? {})) {
+      if (target !== "CONNECT" && target !== "HANGUP" && !MENUS[target]) {
+        dangling += ` ${key}:"${fragment}"→${target}`;
+      }
+    }
   }
   ok("no dangling menu targets", dangling === "", `dangling:${dangling}`);
 }

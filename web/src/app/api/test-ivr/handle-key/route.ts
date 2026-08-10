@@ -11,12 +11,22 @@ import { transition, twimlResponse } from "@/lib/testIvr";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-async function digitsFrom(req: NextRequest): Promise<string> {
+/** Twilio posts `Digits` for keypresses and `SpeechResult` for hybrid
+ *  (speech-enabled) Gathers — either or both may be present. */
+async function inputFrom(req: NextRequest): Promise<{ digits: string; speech: string }> {
   if (req.method === "POST") {
     const form = await req.formData().catch(() => null);
-    if (form) return String(form.get("Digits") ?? "");
+    if (form) {
+      return {
+        digits: String(form.get("Digits") ?? ""),
+        speech: String(form.get("SpeechResult") ?? ""),
+      };
+    }
   }
-  return req.nextUrl.searchParams.get("Digits") ?? "";
+  return {
+    digits: req.nextUrl.searchParams.get("Digits") ?? "",
+    speech: req.nextUrl.searchParams.get("SpeechResult") ?? "",
+  };
 }
 
 async function handle(req: NextRequest): Promise<Response> {
@@ -25,8 +35,8 @@ async function handle(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
   const menuKey = req.nextUrl.searchParams.get("menu") ?? "main";
-  const digit = await digitsFrom(req);
-  return twimlResponse(transition(menuKey, digit));
+  const { digits, speech } = await inputFrom(req);
+  return twimlResponse(transition(menuKey, digits, speech));
 }
 
 export const GET = handle;

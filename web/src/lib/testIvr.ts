@@ -26,13 +26,32 @@ type Menu = {
    *  (the callback-offer menu: staying quiet is the correct move). Default:
    *  goodbye + hangup. */
   timeoutTarget?: string;
+  /** Speech routing (lowercase keyword fragment → target). Present = the
+   *  Gather becomes hybrid (input="speech dtmf"): the caller can SAY the
+   *  reason or press a key. First matching fragment wins. */
+  speech?: Record<string, string>;
 };
 
 export const MENUS: Record<string, Menu> = {
   main: {
+    // Speech-first greeting, like modern medical IVRs — but keys still work
+    // (hybrid). The agent should answer with a SHORT spoken phrase, or press.
     prompt:
-      "Thank you for calling Wellness Partners. For appointments, press 1. For billing, press 2. To repeat this menu, press 9.",
+      "Thank you for calling Wellness Partners. In a few words, please tell me the reason for your call — for example, scheduling an appointment, or billing. You can also press 1 for appointments, or 2 for billing.",
     options: { "1": "appointments", "2": "billing", "9": "main" },
+    speech: {
+      appointment: "appointments",
+      schedul: "appointments",
+      reschedul: "appointments",
+      checkup: "appointments",
+      "check up": "appointments",
+      doctor: "appointments",
+      lab: "appointments",
+      blood: "appointments",
+      billing: "billing",
+      bill: "billing",
+    },
+    invalidPrompt: "Sorry, I didn't catch that. ",
   },
   appointments: {
     prompt:
@@ -96,8 +115,12 @@ export function renderMenu(menuKey: string, prefix = ""): string {
     menu.timeoutTarget === "CONNECT"
       ? connectBody()
       : `${SAY("Sorry, we did not receive your selection. Goodbye.")}\n  <Hangup/>`;
+  // Hybrid menus accept speech AND keypresses; hints help Twilio's recognizer.
+  const input = menu.speech
+    ? ` input="speech dtmf" speechTimeout="auto" hints="appointment, schedule, reschedule, checkup, lab, blood work, billing"`
+    : "";
   return `<Response>
-  <Gather numDigits="${menu.numDigits ?? 1}" action="/api/test-ivr/handle-key?menu=${menuKey}" method="POST" timeout="10">
+  <Gather numDigits="${menu.numDigits ?? 1}"${input} action="/api/test-ivr/handle-key?menu=${menuKey}" method="POST" timeout="10">
     ${SAY(prefix + menu.prompt)}
   </Gather>
   ${afterGather}
@@ -123,10 +146,20 @@ export function renderConnect(): string {
   return `<Response>\n  ${connectBody()}\n</Response>`;
 }
 
-/** Resolve a keypress (or multi-digit entry) within a menu to the next TwiML. */
-export function transition(menuKey: string, digits: string): string {
+/** Resolve a keypress (or multi-digit entry, or spoken phrase) within a menu
+ *  to the next TwiML. Digits win over speech when both arrive. */
+export function transition(menuKey: string, digits: string, speech = ""): string {
   const menu = MENUS[menuKey] ?? MENUS.main;
-  const target = menu.options[digits];
+  let target = menu.options[digits];
+  if (!target && speech && menu.speech) {
+    const said = speech.toLowerCase();
+    for (const [fragment, t] of Object.entries(menu.speech)) {
+      if (said.includes(fragment)) {
+        target = t;
+        break;
+      }
+    }
+  }
   if (!target) {
     return renderMenu(menuKey, menu.invalidPrompt ?? "Sorry, that isn't a valid option. ");
   }
