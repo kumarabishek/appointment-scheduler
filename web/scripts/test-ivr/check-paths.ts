@@ -77,6 +77,22 @@ function checkTransitions() {
       say("main", "I want to order a pizza", "menu=main"),
   );
   ok("digits still win on the hybrid menu", has("main", "1", "menu=appointments"));
+
+  // Timeout resilience: a silent Gather gets ONE reprompt (lost DTMF bursts
+  // happen), then hangs up on the second silence.
+  ok(
+    "first silent timeout → reprompt redirect",
+    renderMenu("dob").includes("reprompt=2") && !renderMenu("dob").includes("<Hangup/>"),
+  );
+  ok(
+    "second silent timeout → goodbye + hangup",
+    renderMenu("dob", "", 2).includes("did not receive your selection") &&
+      renderMenu("dob", "", 2).includes("<Hangup/>"),
+  );
+  ok(
+    "callback menu still connects on silence (no reprompt)",
+    renderMenu("callback").includes("Please hold") && !renderMenu("callback").includes("reprompt=2"),
+  );
 }
 
 /** Walk the tree by digits, mirroring the runtime transitions. */

@@ -106,17 +106,21 @@ export function twimlResponse(xml: string): Response {
 
 /** Render a menu as a Gather (or a terminal say+hangup if it has no options).
  *  `prefix` lets us prepend a "that wasn't valid" note when reprompting. */
-export function renderMenu(menuKey: string, prefix = ""): string {
+export function renderMenu(menuKey: string, prefix = "", attempt = 1): string {
   const menu = MENUS[menuKey] ?? MENUS.main;
   if (Object.keys(menu.options).length === 0) {
     return `<Response>\n  ${SAY(prefix + menu.prompt)}\n  <Hangup/>\n</Response>`;
   }
   // No input falls through to whatever follows the Gather: the menu's timeout
-  // target (the callback menu connects silent callers) or a goodbye + hangup.
+  // target (the callback menu connects silent callers), ONE "still there?"
+  // reprompt (real IVRs re-ask, and in-band DTMF is occasionally lost — a
+  // single missed burst shouldn't kill the call), then goodbye + hangup.
   const afterGather =
     menu.timeoutTarget === "CONNECT"
       ? connectBody()
-      : `${SAY("Sorry, we did not receive your selection. Goodbye.")}\n  <Hangup/>`;
+      : attempt < 2
+        ? `<Redirect method="POST">/api/test-ivr/handle-key?menu=${menuKey}&amp;reprompt=2</Redirect>`
+        : `${SAY("Sorry, we did not receive your selection. Goodbye.")}\n  <Hangup/>`;
   // Hybrid menus accept speech AND keypresses; hints help Twilio's recognizer.
   const input = menu.speech
     ? ` input="speech dtmf" speechTimeout="auto" hints="appointment, schedule, reschedule, checkup, lab, blood work, billing"`

@@ -6,7 +6,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { config } from "@/lib/config";
-import { transition, twimlResponse } from "@/lib/testIvr";
+import { renderMenu, transition, twimlResponse } from "@/lib/testIvr";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +36,11 @@ async function handle(req: NextRequest): Promise<Response> {
   }
   const menuKey = req.nextUrl.searchParams.get("menu") ?? "main";
   const { digits, speech } = await inputFrom(req);
+  // Gather timed out with no input at all: give the same menu one more chance
+  // ("are you still there?"); a second silent timeout ends the call.
+  if (!digits && !speech && req.nextUrl.searchParams.get("reprompt") === "2") {
+    return twimlResponse(renderMenu(menuKey, "Are you still there? ", 2));
+  }
   return twimlResponse(transition(menuKey, digits, speech));
 }
 
