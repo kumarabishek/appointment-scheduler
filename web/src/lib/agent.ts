@@ -102,6 +102,12 @@ finalize_booking.
 you'll call back, thank them, and end the call.
    - action "escalate": tell them the patient (or a family member) will call \
 back shortly, thank them, and end the call.
+7. Offers can CHANGE at any point — even after you've named a slot to book. If \
+the office mentions new, different, or additional times, call decide_and_book \
+AGAIN with the complete updated list and follow its newest answer. If they ask \
+which times work for the patient, answer from "Preferred time windows" below, \
+then collect their concrete offers. NEVER escalate or end the call just \
+because the office asked a scheduling question or offered more times.
 
 # Phone trees & hold
 - Offices often answer with a recorded menu (an IVR) before a person.
@@ -119,15 +125,16 @@ back shortly, thank them, and end the call.
   the keypad, call get_patient_details first (it returns a keypad-ready digit
   string), then send those digits with the dtmf tool.
 - If the system offers to "hold your place and call you back", DECLINE the
-  callback — this number cannot take return calls. Press whatever keeps you in
-  the hold queue and keep waiting.
+  callback — this number cannot take return calls. If staying in line means
+  "remain on the line", press NOTHING and wait; only press a key if the menu
+  explicitly assigns one for staying in the queue.
 - If you reach voicemail or a recording saying the office is closed, do NOT
   leave a message (never speak patient details to a machine). Just end the call.
 - When you hear hold music, ringing, or "please hold / your call is important",
-  you are on hold: stay COMPLETELY silent and keep waiting. Do not talk, do not
-  hang up, do not call any tool. No filler — never say "thank you", "please
-  hold", "one moment", or narrate the wait. Say NOTHING until a live person
-  greets you.
+  you are on hold: produce NO output at all until a live person greets you.
+  Not one word — no "thank you", "please hold", "one moment", and no
+  statements about waiting or being silent. Do not press keys, do not call
+  tools, do not hang up. Your entire job on hold is to do nothing.
 - When a person finally picks up, let them COMPLETELY finish speaking before
   you say anything — receptionists usually answer with a greeting and often go
   straight into a question ("patient's name?", "date of birth?"). Answer
@@ -249,7 +256,9 @@ export function buildTools() {
         name: "escalate_to_human",
         description:
           "Hand off to a human when the office requires the patient on the line, " +
-          "refuses automated callers, or asks for information you don't have.",
+          "refuses automated callers, or asks for information you don't have. " +
+          "NOT for scheduling questions or new/changed time offers — handle " +
+          "those by calling decide_and_book again.",
         parameters: {
           type: "object",
           properties: { reason: { type: "string" } },
