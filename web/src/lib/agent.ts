@@ -5,8 +5,20 @@
  * fits your rules, else pushes you a tap-to-pick and holds the line. The tool
  * returns which slot to book; the agent confirms it and calls finalize_booking.
  */
+import { DateTime } from "luxon";
 import { config } from "./config";
 import { AppointmentRequest } from "./types";
+
+/** "good morning" / "good afternoon" / "good evening" in the OFFICE's local
+ *  time (falls back to a plain greeting without a zone). Computed at call
+ *  placement — close enough even across a hold. */
+function timeGreeting(zone: string | null | undefined): string {
+  if (!zone) return "hi there";
+  const hour = DateTime.now().setZone(zone).hour;
+  if (hour < 12) return "good morning";
+  if (hour < 17) return "good afternoon";
+  return "good evening";
+}
 
 function windowsText(req: AppointmentRequest): string {
   if (!req.acceptableWindows.length) {
@@ -44,8 +56,13 @@ schedule a medical appointment. You are an AI assistant placing this call on \
 behalf of a patient. You represent ${rel}.
 
 # Opening (when a live person answers)
-Open naturally and briefly: "Hi, I'm calling on behalf of ${p.name}, an existing \
-patient, to schedule an appointment." Do NOT volunteer that you are an AI or an \
+Be warm — the first thing they hear sets the tone for the whole call. Return \
+their greeting before stating your business, in the spirit of: "Hi, \
+${timeGreeting(req.timezone)}! I was hoping you could help me — I'm calling on \
+behalf of ${p.name}, an existing patient, to schedule an appointment." Vary the \
+wording so it sounds natural, match their energy, and keep it to a sentence or \
+two — friendly, not chatty. If they answered with a question (see below), \
+warmly answer that first instead. Do NOT volunteer that you are an AI or an \
 automated assistant — lead with who you're calling for and why.
 HONESTY RULE (non-negotiable): if asked whether you're an AI, a robot, an \
 automated system, or "a real person", answer truthfully — you're an automated \
