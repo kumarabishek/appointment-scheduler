@@ -30,7 +30,7 @@ function checkTransitions() {
   ok("main 1 → appointments submenu", has("main", "1", "menu=appointments"));
   ok("main 2 → billing hangup", has("main", "2", "<Hangup/>") && !has("main", "2", "<Gather"));
   ok("main 9 → repeats main", has("main", "9", "menu=main"));
-  ok("main 5 → invalid reprompt", has("main", "5", "isn't a valid option") && has("main", "5", "menu=main"));
+  ok("main 5 → invalid reprompt", has("main", "5", "didn't catch that") && has("main", "5", "menu=main"));
 
   ok("appointments 1 → new submenu", has("appointments", "1", "menu=new"));
   ok("appointments 2 → DOB gate", has("appointments", "2", "menu=dob"));
