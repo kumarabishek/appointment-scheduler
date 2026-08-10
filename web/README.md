@@ -5,8 +5,9 @@ point: fill out a form, hit *Call & book*, and watch the call's status update
 live on the dashboard. (The original Python prototype lives in `../app`.)
 
 Single-call hybrid flow: the agent calls the office and books a slot that fits
-your rules on the spot. If nothing fits, it applies your `EDGE_FALLBACK` rule
-(book the closest time, or decline) and shows the result on the dashboard.
+your rules on the spot. If nothing fits, it applies the fallback you chose on
+the booking form (decline politely, or book the closest time anyway) and shows
+the result on the dashboard.
 
 > Optional live approval: set `NTFY_TOPIC` to get a tap-to-pick push for edge
 > cases (the agent holds the line while you decide). Left blank, it's disabled

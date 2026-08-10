@@ -45,6 +45,10 @@ export const AppointmentRequest = z.object({
   visitType: z.string().default("existing patient"),
   preferredProvider: z.string().nullish(),
   acceptableWindows: z.array(TimeWindow).default([]),
+  // Per-request fallback when NO offered slot fits the windows (and the owner
+  // didn't tap an approval): true = book the closest offered time anyway,
+  // false = politely decline. Replaces the old global EDGE_FALLBACK env.
+  allowOutsideWindows: z.boolean().default(false),
   urgency: z.enum(["routine", "soon", "urgent"]).default("routine"),
   extraNotes: z.string().nullish(),
   createdAt: z.string().default(() => new Date().toISOString()),

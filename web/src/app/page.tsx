@@ -70,6 +70,7 @@ export default function Home() {
     providerName: "",
     providerPhone: "",
     reason: "",
+    preferredProvider: "",
     urgency: "routine",
     timezone: "",
     days: ["mon", "tue", "wed", "thu", "fri"] as string[],
@@ -77,6 +78,7 @@ export default function Home() {
     latest: "11:00",
     notBeforeDate: "",
     notAfterDate: "",
+    allowOutsideWindows: false,
     extraNotes: "",
   });
   const [submitting, setSubmitting] = useState(false);
@@ -138,9 +140,11 @@ export default function Home() {
       providerName: form.providerName,
       providerPhone: form.providerPhone,
       reason: form.reason,
+      preferredProvider: form.preferredProvider || null,
       urgency: form.urgency,
       timezone: form.timezone || null,
       extraNotes: form.extraNotes || null,
+      allowOutsideWindows: form.allowOutsideWindows,
       acceptableWindows: [
         {
           days: form.days,
@@ -329,13 +333,25 @@ export default function Home() {
                     required
                   />
                 </div>
-                <div className="field">
-                  <label>Urgency</label>
-                  <select value={form.urgency} onChange={(e) => set("urgency", e.target.value)}>
-                    <option value="routine">Routine</option>
-                    <option value="soon">Soon (this week)</option>
-                    <option value="urgent">Urgent (ASAP)</option>
-                  </select>
+                <div className="two">
+                  <div className="field">
+                    <label>
+                      Preferred doctor <span className="hint">(optional)</span>
+                    </label>
+                    <input
+                      value={form.preferredProvider}
+                      onChange={(e) => set("preferredProvider", e.target.value)}
+                      placeholder="e.g. Dr. Chan — else any"
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Urgency</label>
+                    <select value={form.urgency} onChange={(e) => set("urgency", e.target.value)}>
+                      <option value="routine">Routine</option>
+                      <option value="soon">Soon (this week)</option>
+                      <option value="urgent">Urgent (ASAP)</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -398,6 +414,23 @@ export default function Home() {
                       value={form.notAfterDate}
                       onChange={(e) => set("notAfterDate", e.target.value)}
                     />
+                  </div>
+                </div>
+                <div>
+                  <div className="fieldlabel">If nothing fits these hours</div>
+                  <div className="days">
+                    <div
+                      className={`daychip${!form.allowOutsideWindows ? " on" : ""}`}
+                      onClick={() => set("allowOutsideWindows", false)}
+                    >
+                      decline politely
+                    </div>
+                    <div
+                      className={`daychip${form.allowOutsideWindows ? " on" : ""}`}
+                      onClick={() => set("allowOutsideWindows", true)}
+                    >
+                      book closest time anyway
+                    </div>
                   </div>
                 </div>
               </div>

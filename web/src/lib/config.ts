@@ -30,11 +30,6 @@ export const config = {
   // route's maxDuration, with margin for the booking work after the tap.
   decisionTimeoutMs: Number(env("DECISION_TIMEOUT_SECONDS", "45")) * 1000,
 
-  // Edge-case fallback when you don't tap in time: "closest" | "decline".
-  // Defaults to "decline": auto-booking a time you explicitly said doesn't fit
-  // is surprising, so booking the closest anyway is opt-in.
-  edgeFallback: env("EDGE_FALLBACK", "decline"),
-
   // Per-user abuse guard: max outbound calls a user can place per rolling 24h.
   // Each call is billed to your Vapi/LLM account, so cap it.
   dailyCallLimit: Number(env("DAILY_CALL_LIMIT", "3")),

@@ -154,19 +154,20 @@ async function decideAndBook(rec: CallRecord, args: Args): Promise<string> {
   return applyFallback(rec, slots, zone, "no reply in time");
 }
 
-/** Apply the EDGE_FALLBACK rule when no slot fits and we're not asking live. */
+/** No slot fits and we're not asking live: apply the request's own fallback
+ *  choice (form: "book closest anyway" vs "decline politely"). */
 async function applyFallback(
   rec: CallRecord,
   slots: OfferedSlot[],
   zone: string,
   why: string,
 ): Promise<string> {
-  if (config.edgeFallback === "closest") {
+  if (rec.request.allowOutsideWindows) {
     const slot = earliestOverall(slots, zone);
     if (slot) {
       await sendInfo(
-        "⏱️ Auto-booked the closest time",
-        "It was outside your usual window. Open the app for details.",
+        "⏱️ Booked the closest time",
+        "It was outside your window (you allowed this). Open the app for details.",
       );
       return authorize(rec, slot, zone, `${why}; closest option`);
     }

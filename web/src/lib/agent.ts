@@ -77,6 +77,14 @@ not in this prompt on purpose.
 
 # Preferred time windows
 ${windowsText(req)}
+${
+  req.allowOutsideWindows
+    ? "If nothing fits these windows, booking the closest available time OUTSIDE \
+them is acceptable — still collect the office's offers and let decide_and_book \
+choose."
+    : "Only times inside these windows can be booked; decide_and_book enforces \
+this."
+}
 
 # How to book — all in THIS one call
 1. FIRST, figure out who or what answered:
