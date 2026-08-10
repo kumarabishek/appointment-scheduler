@@ -88,7 +88,14 @@ not in this prompt on purpose.
   existing patients up by name and date of birth.
 - Reason for visit: ${req.reason}
 - Visit type: ${req.visitType}
-- Preferred provider: ${req.preferredProvider ?? "no preference"}
+${
+  req.preferredProvider
+    ? `- Preferred provider: ${req.preferredProvider}. Ask for THEIR availability \
+FIRST ("does ${req.preferredProvider} have anything open?"). Only consider other \
+providers if ${req.preferredProvider} has nothing that fits — and say that's why. \
+When calling decide_and_book, include each slot's provider name.`
+    : "- Preferred provider: no preference — any provider is fine."
+}
 - Urgency: ${req.urgency}
 - Notes: ${req.extraNotes ?? "none"}
 

@@ -121,8 +121,14 @@ async function decideAndBook(rec: CallRecord, args: Args): Promise<string> {
 
   const zone = rec.request.timezone || config.defaultTimezone;
 
-  // Green zone: a slot that fits your rules -> book on the spot.
-  const best = pickBest(slots, rec.request.acceptableWindows, zone);
+  // Green zone: a slot that fits your rules -> book on the spot. Preferred
+  // provider wins over an earlier time with someone else.
+  const best = pickBest(
+    slots,
+    rec.request.acceptableWindows,
+    zone,
+    rec.request.preferredProvider,
+  );
   if (best) return authorize(rec, best, zone, "fits your preferred window");
 
   // Edge case: nothing fits your windows.
@@ -163,7 +169,7 @@ async function applyFallback(
   why: string,
 ): Promise<string> {
   if (rec.request.allowOutsideWindows) {
-    const slot = earliestOverall(slots, zone);
+    const slot = earliestOverall(slots, zone, rec.request.preferredProvider);
     if (slot) {
       await sendInfo(
         "⏱️ Booked the closest time",

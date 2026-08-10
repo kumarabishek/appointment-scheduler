@@ -14,6 +14,7 @@ import {
   inGreenZone,
   parseSlot,
   pickBest,
+  providerMatches,
 } from "../../src/lib/matching";
 import { TimeWindow } from "../../src/lib/types";
 
@@ -155,6 +156,42 @@ function checkPickBest() {
   );
 }
 
+function checkProviderPreference() {
+  console.log("providerMatches / preferred-provider tiering:");
+  ok("no preference matches anything", providerMatches("Dr Patel", null) && providerMatches(null, ""));
+  ok('"Dr. Chan" matches "Steven Chan"', providerMatches("Steven Chan", "Dr. Chan"));
+  ok('"Dr Stephen Chan" matches "Dr Chan"', providerMatches("Dr Chan", "Dr Stephen Chan"));
+  ok("case/punctuation-insensitive", providerMatches("DR. CHAN", "dr chan"));
+  ok('"Dr. Chan" does NOT match "Dr. Chandra"', !providerMatches("Dr Chandra", "Dr. Chan"));
+  ok('"Dr. Chan" does NOT match "Dr. Patel"', !providerMatches("Dr Patel", "Dr. Chan"));
+  ok(
+    "unnamed slot provider can't claim a preference",
+    !providerMatches(null, "Dr. Chan") && !providerMatches("", "Dr. Chan"),
+  );
+
+  const business = [win({ earliest: "08:00", latest: "18:00" })];
+  const offers = [
+    { startsAt: "Jun 18 2030 at 10:00 AM", provider: "Dr Patel" },
+    { startsAt: "Jun 20 2030 at 3:00 PM", provider: "Dr Stephen Chan" },
+  ];
+  ok(
+    "preferred provider beats an earlier slot with someone else",
+    pickBest(offers, business, ZONE, "Dr. Chan")?.provider === "Dr Stephen Chan",
+  );
+  ok(
+    "no preference still picks the earliest",
+    pickBest(offers, business, ZONE)?.provider === "Dr Patel",
+  );
+  ok(
+    "falls back to another provider when preferred isn't offered",
+    pickBest(offers, business, ZONE, "Dr. Nguyen")?.provider === "Dr Patel",
+  );
+  ok(
+    "earliestOverall applies the same tiering",
+    earliestOverall(offers, ZONE, "Dr. Chan")?.provider === "Dr Stephen Chan",
+  );
+}
+
 function checkDrift() {
   console.log("driftedOutsideZone (finalize guard):");
   const business = [win({ earliest: "08:00", latest: "18:00" })];
@@ -197,6 +234,7 @@ function checkDrift() {
 checkParseSlot();
 checkGreenZone();
 checkPickBest();
+checkProviderPreference();
 checkDrift();
 
 console.log(`\n${failed ? "❌" : "✅"} ${passed} passed, ${failed} failed`);

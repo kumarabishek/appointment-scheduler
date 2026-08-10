@@ -73,11 +73,39 @@ export function inGreenZone(dt: DateTime, windows: TimeWindow[]): boolean {
   return windows.some((w) => inWindow(dt, w));
 }
 
-/** Earliest slot that fits the green zone (rule: soonest acceptable). */
+/** Loose provider match: case/punctuation-insensitive, titles stripped, and
+ *  token-subset either way — "Dr. Chan" matches "Steven Chan", but not
+ *  "Dr. Chandra". No preference matches everything; an unnamed slot provider
+ *  matches nothing (can't confirm it's the preferred doctor). */
+export function providerMatches(
+  slotProvider: string | null | undefined,
+  preferred: string | null | undefined,
+): boolean {
+  if (!preferred?.trim()) return true;
+  const norm = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/\b(dr|doctor|md|np|pa)\b/g, " ")
+      .replace(/[^a-z]+/g, " ")
+      .trim();
+  const want = norm(preferred).split(" ").filter(Boolean);
+  const have = norm(slotProvider ?? "").split(" ").filter(Boolean);
+  if (!want.length) return true;
+  if (!have.length) return false;
+  const haveSet = new Set(have);
+  const wantSet = new Set(want);
+  return want.every((w) => haveSet.has(w)) || have.every((w) => wantSet.has(w));
+}
+
+/** Earliest slot that fits the green zone (rule: soonest acceptable). When a
+ *  preferred provider is set, slots with that provider win over earlier slots
+ *  with someone else; other providers are only picked if the preferred one has
+ *  no fitting slot at all. */
 export function pickBest(
   slots: OfferedSlot[],
   windows: TimeWindow[],
   zone: string,
+  preferredProvider?: string | null,
 ): OfferedSlot | null {
   const candidates: Array<[OfferedSlot, DateTime]> = [];
   for (const s of slots) {
@@ -85,8 +113,12 @@ export function pickBest(
     if (dt && inGreenZone(dt, windows)) candidates.push([s, dt]);
   }
   if (!candidates.length) return null;
-  candidates.sort((a, b) => a[1].toMillis() - b[1].toMillis());
-  return candidates[0][0];
+  const withPreferred = candidates.filter(([s]) =>
+    providerMatches(s.provider, preferredProvider),
+  );
+  const pool = withPreferred.length ? withPreferred : candidates;
+  pool.sort((a, b) => a[1].toMillis() - b[1].toMillis());
+  return pool[0][0];
 }
 
 /** Did the finalized slot drift from the approved one (beyond tolerance) AND
@@ -110,12 +142,21 @@ export function driftedOutsideZone(
   return drifted && !(finalized && inGreenZone(finalized, windows));
 }
 
-/** Soonest offered slot regardless of green zone (used by 'closest' fallback). */
-export function earliestOverall(slots: OfferedSlot[], zone: string): OfferedSlot | null {
+/** Soonest offered slot regardless of green zone (used by 'closest' fallback).
+ *  Applies the same preferred-provider tiering as pickBest. */
+export function earliestOverall(
+  slots: OfferedSlot[],
+  zone: string,
+  preferredProvider?: string | null,
+): OfferedSlot | null {
   const dated = slots
     .map((s) => [s, parseSlot(s.startsAt, zone)] as const)
     .filter((pair): pair is [OfferedSlot, DateTime] => pair[1] !== null);
   if (!dated.length) return slots[0] ?? null;
-  dated.sort((a, b) => a[1].toMillis() - b[1].toMillis());
-  return dated[0][0];
+  const withPreferred = dated.filter(([s]) =>
+    providerMatches(s.provider, preferredProvider),
+  );
+  const pool = withPreferred.length ? withPreferred : dated;
+  pool.sort((a, b) => a[1].toMillis() - b[1].toMillis());
+  return pool[0][0];
 }
