@@ -34,10 +34,12 @@ type Menu = {
 
 export const MENUS: Record<string, Menu> = {
   main: {
-    // Speech-first greeting, like modern medical IVRs — but keys still work
-    // (hybrid). The agent should answer with a SHORT spoken phrase, or press.
+    // Speech-first greeting, like modern medical IVRs. Keys still work but are
+    // deliberately NOT announced: the agent prefers keys on hybrid menus, so
+    // announcing them would let it skip the speech path this menu exists to
+    // test. (Humans doing manual runs can still press 1/2/9.)
     prompt:
-      "Thank you for calling Wellness Partners. In a few words, please tell me the reason for your call — for example, scheduling an appointment, or billing. You can also press 1 for appointments, or 2 for billing.",
+      "Thank you for calling Wellness Partners. In a few words, please tell me the reason for your call — for example, scheduling an appointment, or billing.",
     options: { "1": "appointments", "2": "billing", "9": "main" },
     speech: {
       appointment: "appointments",
