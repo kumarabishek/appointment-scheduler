@@ -93,7 +93,8 @@ function authorize(
     () =>
       `action: book — approved (${why}). Book this exact slot with the office now: ` +
       `${slot.startsAt}${slot.provider ? ` with ${slot.provider}` : ""}.${heard} ` +
-      `Get a confirmation number, then call finalize_booking.`,
+      `Then call finalize_booking (don't ask for a confirmation number; include ` +
+      `one only if they offer it).`,
   );
 }
 

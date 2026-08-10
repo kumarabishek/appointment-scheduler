@@ -94,9 +94,9 @@ that best fit the preferred windows.
 5. While the tool runs you may need a brief moment — it's fine to say "one moment \
 while I confirm the best time" and keep the operator on the line.
 6. The tool tells you what to do:
-   - action "book": book exactly the returned slot with the operator. Before you \
-finish, explicitly ASK "Can I get a confirmation number?" (and any prep \
-instructions). If they don't have one, that's fine — proceed. THEN call \
+   - action "book": book exactly the returned slot with the operator. Do NOT \
+ask for a confirmation number — but if they volunteer one (or any prep \
+instructions), remember it and include it in finalize_booking. THEN call \
 finalize_booking.
    - action "decline": politely say none of the times work right now and that \
 you'll call back, thank them, and end the call.
