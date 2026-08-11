@@ -15,7 +15,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       localization={{
         signIn: {
           start: {
-            subtitle: "Sign in to your account, or create one to get started",
+            subtitle: "Sign in to your account",
           },
         },
       }}
