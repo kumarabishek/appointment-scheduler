@@ -11,7 +11,7 @@ export const config = {
 
   // LLM brain — provider key lives in the Vapi dashboard, not here.
   llmProvider: env("LLM_PROVIDER", "google"),
-  model: env("AGENT_MODEL", "gemini-2.5-flash"),
+  model: env("AGENT_MODEL", "gemini-3.5-flash"),
 
   // Voice (TTS) — Vapi's own hosted voices, so there's no third-party TTS
   // account (and no separate quota or key) in the path of a live call.
@@ -22,7 +22,7 @@ export const config = {
 
   // Ears (STT) — Deepgram, key in the Vapi dashboard.
   sttProvider: env("STT_PROVIDER", "deepgram"),
-  sttModel: env("STT_MODEL", "nova-2"),
+  sttModel: env("STT_MODEL", "nova-3"),
 
   // Push (ntfy) — tap-to-pick decisions for edge cases.
   ntfyServer: env("NTFY_SERVER", "https://ntfy.sh").replace(/\/$/, ""),
