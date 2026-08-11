@@ -1,6 +1,27 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const DAY_LABEL: Record<string, string> = {
@@ -35,6 +56,43 @@ function daysSummary(days: string[]): string {
   return on.length ? on.join(", ") : "No days set";
 }
 
+function SectionHead({ title, sub }: { title: string; sub: string }) {
+  return (
+    <div>
+      <h2 className="text-sm font-semibold">{title}</h2>
+      <p className="text-xs text-muted-foreground">{sub}</p>
+    </div>
+  );
+}
+
+function Chip({
+  on,
+  onClick,
+  children,
+  className,
+}: {
+  on: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex-1 rounded-lg border px-2 py-2.5 text-[13px] font-semibold transition-colors",
+        on
+          ? "border-primary bg-primary text-primary-foreground shadow-sm"
+          : "border-input bg-muted/60 text-muted-foreground hover:border-primary/40 hover:text-foreground",
+        className,
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function BookingForm({ onSubmitted }: { onSubmitted: () => Promise<void> | void }) {
   const [form, setForm] = useState({
     patientName: "",
@@ -58,7 +116,6 @@ export function BookingForm({ onSubmitted }: { onSubmitted: () => Promise<void> 
     extraNotes: "",
   });
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -89,7 +146,6 @@ export function BookingForm({ onSubmitted }: { onSubmitted: () => Promise<void> 
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
     setSubmitting(true);
     const body = {
       patient: {
@@ -125,306 +181,299 @@ export function BookingForm({ onSubmitted }: { onSubmitted: () => Promise<void> 
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok) setError(data.error || "Failed to place call.");
-      else await onSubmitted();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to place call.");
+      } else {
+        toast.success("Call placed — the agent is dialing the office.");
+        await onSubmitted();
+      }
     } catch (err) {
-      setError(String(err));
+      toast.error(String(err));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <form className="card form-card" onSubmit={submit}>
-      <div className="panel-head">
-        <span className="eyebrow">NEW BOOKING</span>
-      </div>
-
-      {/* 01 — Who */}
-      <div className="section">
-        <div className="section-head">
-          <div className="num">01</div>
-          <div>
-            <div className="section-title">Who&apos;s this for?</div>
-            <div className="section-sub">Patient on record at the office</div>
-          </div>
-        </div>
-        <div className="col">
-          <div className="field">
-            <label>Patient name</label>
-            <input
-              value={form.patientName}
-              onChange={(e) => set("patientName", e.target.value)}
-              placeholder="Full name"
-              required
-            />
-          </div>
-          <div className="two">
-            <div className="field">
-              <label>Date of birth</label>
-              <input
-                type="date"
-                value={form.dateOfBirth}
-                onChange={(e) => set("dateOfBirth", e.target.value)}
+    <Card>
+      <CardContent className="pt-6">
+        <form onSubmit={submit} className="flex flex-col gap-7">
+          {/* Who */}
+          <section className="flex flex-col gap-4">
+            <SectionHead title="Who's this for?" sub="Patient on record at the office" />
+            <div className="grid gap-2">
+              <Label htmlFor="patientName">Patient name</Label>
+              <Input
+                id="patientName"
+                value={form.patientName}
+                onChange={(e) => set("patientName", e.target.value)}
+                placeholder="Full name"
                 required
               />
             </div>
-            <div className="field">
-              <label>Your relationship</label>
-              <select
-                value={form.callerRelationship}
-                onChange={(e) => set("callerRelationship", e.target.value)}
-              >
-                <option value="self">Self</option>
-                <option value="parent / guardian">Parent / guardian</option>
-                <option value="child">Child</option>
-                <option value="spouse / partner">Spouse / partner</option>
-                <option value="caregiver">Caregiver</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 02 — Insurance */}
-      <div className="section">
-        <div className="section-head">
-          <div className="num">02</div>
-          <div>
-            <div className="section-title">Insurance</div>
-            <div className="section-sub">So the agent can verify coverage on the call</div>
-          </div>
-        </div>
-        <div className="two">
-          <div className="field">
-            <label>Provider</label>
-            <input
-              value={form.insuranceProvider}
-              onChange={(e) => set("insuranceProvider", e.target.value)}
-              placeholder="e.g. Blue Shield"
-            />
-          </div>
-          <div className="field">
-            <label>Member ID</label>
-            <input
-              value={form.insuranceMemberId}
-              onChange={(e) => set("insuranceMemberId", e.target.value)}
-              placeholder="ID on your card"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* 03 — Office */}
-      <div className="section">
-        <div className="section-head">
-          <div className="num">03</div>
-          <div>
-            <div className="section-title">Office to call</div>
-            <div className="section-sub">The clinic, lab, or provider we&apos;ll dial</div>
-          </div>
-        </div>
-        <div className="col">
-          <div className="two-wide">
-            <div className="field">
-              <label>Office / provider name</label>
-              <input
-                value={form.providerName}
-                onChange={(e) => set("providerName", e.target.value)}
-                placeholder="e.g. Bay Area Family Medicine"
-                required
-              />
-            </div>
-            <div className="field">
-              <label>Office phone</label>
-              <input
-                value={form.providerPhone}
-                onChange={(e) => set("providerPhone", e.target.value)}
-                placeholder="+1…"
-                required
-              />
-            </div>
-          </div>
-          <div className="field">
-            <label>
-              Office timezone <span className="hint">— auto-detected</span>
-            </label>
-            <select value={form.timezone} onChange={(e) => set("timezone", e.target.value)}>
-              {tzOptions.map((tz) => (
-                <option key={tz} value={tz}>
-                  {tz}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* 04 — Reason & urgency */}
-      <div className="section">
-        <div className="section-head">
-          <div className="num">04</div>
-          <div>
-            <div className="section-title">Reason &amp; urgency</div>
-            <div className="section-sub">What to book, and how soon</div>
-          </div>
-        </div>
-        <div className="col">
-          <div className="field">
-            <label>Reason for visit</label>
-            <input
-              value={form.reason}
-              onChange={(e) => set("reason", e.target.value)}
-              placeholder="e.g. fasting blood test"
-              required
-            />
-          </div>
-          <div className="two">
-            <div className="field">
-              <label>
-                Preferred doctor <span className="hint">(optional)</span>
-              </label>
-              <input
-                value={form.preferredProvider}
-                onChange={(e) => set("preferredProvider", e.target.value)}
-                placeholder="e.g. Dr. Chan — else any"
-              />
-            </div>
-            <div className="field">
-              <label>Urgency</label>
-              <select value={form.urgency} onChange={(e) => set("urgency", e.target.value)}>
-                <option value="routine">Routine</option>
-                <option value="soon">Soon (this week)</option>
-                <option value="urgent">Urgent (ASAP)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 05 — When */}
-      <div className="section">
-        <div className="section-head">
-          <div className="num">05</div>
-          <div>
-            <div className="section-title">When works for you?</div>
-            <div className="section-sub">The agent only books inside these limits</div>
-          </div>
-        </div>
-        <div className="col">
-          <div>
-            <div className="fieldlabel">Acceptable days</div>
-            <div className="days">
-              {DAYS.map((d) => (
-                <div
-                  key={d}
-                  className={`daychip${form.days.includes(d) ? " on" : ""}`}
-                  onClick={() => toggleDay(d)}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="dateOfBirth">Date of birth</Label>
+                <Input
+                  id="dateOfBirth"
+                  type="date"
+                  value={form.dateOfBirth}
+                  onChange={(e) => set("dateOfBirth", e.target.value)}
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Your relationship</Label>
+                <Select
+                  value={form.callerRelationship}
+                  onValueChange={(v) => v != null && set("callerRelationship", v)}
                 >
-                  {d}
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="self">Self</SelectItem>
+                    <SelectItem value="parent / guardian">Parent / guardian</SelectItem>
+                    <SelectItem value="child">Child</SelectItem>
+                    <SelectItem value="spouse / partner">Spouse / partner</SelectItem>
+                    <SelectItem value="caregiver">Caregiver</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </section>
+
+          <Separator />
+
+          {/* Office */}
+          <section className="flex flex-col gap-4">
+            <SectionHead title="Office to call" sub="The clinic, lab, or provider we'll dial" />
+            <div className="grid gap-4 sm:grid-cols-[1.3fr_1fr]">
+              <div className="grid gap-2">
+                <Label htmlFor="providerName">Office / provider name</Label>
+                <Input
+                  id="providerName"
+                  value={form.providerName}
+                  onChange={(e) => set("providerName", e.target.value)}
+                  placeholder="e.g. Bay Area Family Medicine"
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="providerPhone">Office phone</Label>
+                <Input
+                  id="providerPhone"
+                  value={form.providerPhone}
+                  onChange={(e) => set("providerPhone", e.target.value)}
+                  placeholder="+1…"
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>
+                Office timezone <span className="font-normal text-muted-foreground">— auto-detected</span>
+              </Label>
+              <Select value={form.timezone} onValueChange={(v) => v != null && set("timezone", v)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {tzOptions.map((tz) => (
+                    <SelectItem key={tz} value={tz}>
+                      {tz}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </section>
+
+          <Separator />
+
+          {/* Reason & urgency */}
+          <section className="flex flex-col gap-4">
+            <SectionHead title="Reason & urgency" sub="What to book, and how soon" />
+            <div className="grid gap-2">
+              <Label htmlFor="reason">Reason for visit</Label>
+              <Input
+                id="reason"
+                value={form.reason}
+                onChange={(e) => set("reason", e.target.value)}
+                placeholder="e.g. fasting blood test"
+                required
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="preferredProvider">
+                  Preferred doctor <span className="font-normal text-muted-foreground">(optional)</span>
+                </Label>
+                <Input
+                  id="preferredProvider"
+                  value={form.preferredProvider}
+                  onChange={(e) => set("preferredProvider", e.target.value)}
+                  placeholder="e.g. Dr. Chan — else any"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Urgency</Label>
+                <Select value={form.urgency} onValueChange={(v) => v != null && set("urgency", v)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="routine">Routine</SelectItem>
+                    <SelectItem value="soon">Soon (this week)</SelectItem>
+                    <SelectItem value="urgent">Urgent (ASAP)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </section>
+
+          <Separator />
+
+          {/* When */}
+          <section className="flex flex-col gap-4">
+            <SectionHead title="When works for you?" sub="The agent only books inside these limits" />
+            <div className="grid gap-2">
+              <Label>Acceptable days</Label>
+              <div className="flex gap-2">
+                {DAYS.map((d) => (
+                  <Chip key={d} on={form.days.includes(d)} onClick={() => toggleDay(d)} className="lowercase">
+                    {d}
+                  </Chip>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="earliest">Earliest time</Label>
+                <Input
+                  id="earliest"
+                  type="time"
+                  value={form.earliest}
+                  onChange={(e) => set("earliest", e.target.value || "08:00")}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="latest">Latest time</Label>
+                <Input
+                  id="latest"
+                  type="time"
+                  value={form.latest}
+                  onChange={(e) => set("latest", e.target.value || "11:00")}
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="notBeforeDate">Not before</Label>
+                <Input
+                  id="notBeforeDate"
+                  type="date"
+                  value={form.notBeforeDate}
+                  onChange={(e) => set("notBeforeDate", e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="notAfterDate">Not after</Label>
+                <Input
+                  id="notAfterDate"
+                  type="date"
+                  value={form.notAfterDate}
+                  onChange={(e) => set("notAfterDate", e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>If nothing fits these hours</Label>
+              <div className="flex gap-2">
+                <Chip on={!form.allowOutsideWindows} onClick={() => set("allowOutsideWindows", false)}>
+                  decline politely
+                </Chip>
+                <Chip on={form.allowOutsideWindows} onClick={() => set("allowOutsideWindows", true)}>
+                  book closest time anyway
+                </Chip>
+              </div>
+            </div>
+          </section>
+
+          <Separator />
+
+          {/* Optional details, collapsed by default */}
+          <Accordion multiple className="-my-3">
+            <AccordionItem value="insurance">
+              <AccordionTrigger className="py-3 hover:no-underline">
+                <SectionHead title="Insurance" sub="Optional — so the agent can verify coverage on the call" />
+              </AccordionTrigger>
+              <AccordionContent className="pb-4">
+                <div className="grid gap-4 pt-1 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="insuranceProvider">Provider</Label>
+                    <Input
+                      id="insuranceProvider"
+                      value={form.insuranceProvider}
+                      onChange={(e) => set("insuranceProvider", e.target.value)}
+                      placeholder="e.g. Blue Shield"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="insuranceMemberId">Member ID</Label>
+                    <Input
+                      id="insuranceMemberId"
+                      value={form.insuranceMemberId}
+                      onChange={(e) => set("insuranceMemberId", e.target.value)}
+                      placeholder="ID on your card"
+                    />
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-          <div className="two">
-            <div className="field">
-              <label>Earliest time</label>
-              <input
-                type="time"
-                value={form.earliest}
-                onChange={(e) => set("earliest", e.target.value || "08:00")}
-              />
-            </div>
-            <div className="field">
-              <label>Latest time</label>
-              <input
-                type="time"
-                value={form.latest}
-                onChange={(e) => set("latest", e.target.value || "11:00")}
-              />
-            </div>
-          </div>
-          <div className="two">
-            <div className="field">
-              <label>Not before</label>
-              <input
-                type="date"
-                value={form.notBeforeDate}
-                onChange={(e) => set("notBeforeDate", e.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label>Not after</label>
-              <input
-                type="date"
-                value={form.notAfterDate}
-                onChange={(e) => set("notAfterDate", e.target.value)}
-              />
-            </div>
-          </div>
-          <div>
-            <div className="fieldlabel">If nothing fits these hours</div>
-            <div className="days">
-              <div
-                className={`daychip${!form.allowOutsideWindows ? " on" : ""}`}
-                onClick={() => set("allowOutsideWindows", false)}
-              >
-                decline politely
-              </div>
-              <div
-                className={`daychip${form.allowOutsideWindows ? " on" : ""}`}
-                onClick={() => set("allowOutsideWindows", true)}
-              >
-                book closest time anyway
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="reaching-you" className="border-b-0">
+              <AccordionTrigger className="py-3 hover:no-underline">
+                <SectionHead title="Reaching you" sub="Optional — only if the agent gets stuck" />
+              </AccordionTrigger>
+              <AccordionContent className="pb-4">
+                <div className="flex flex-col gap-4 pt-1">
+                  <div className="grid gap-2">
+                    <Label htmlFor="callbackNumber">Callback number</Label>
+                    <Input
+                      id="callbackNumber"
+                      value={form.callbackNumber}
+                      onChange={(e) => set("callbackNumber", e.target.value)}
+                      placeholder="+1…"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="extraNotes">Notes</Label>
+                    <Textarea
+                      id="extraNotes"
+                      value={form.extraNotes}
+                      onChange={(e) => set("extraNotes", e.target.value)}
+                      rows={3}
+                      placeholder="Anything the agent should mention or ask…"
+                    />
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
 
-      {/* 06 — Reaching you */}
-      <div className="section">
-        <div className="section-head">
-          <div className="num">06</div>
-          <div>
-            <div className="section-title">Reaching you</div>
-            <div className="section-sub">Only if the agent gets stuck</div>
-          </div>
-        </div>
-        <div className="col">
-          <div className="field">
-            <label>Callback number</label>
-            <input
-              value={form.callbackNumber}
-              onChange={(e) => set("callbackNumber", e.target.value)}
-              placeholder="+1…"
-            />
-          </div>
-          <div className="field">
-            <label>
-              Notes <span className="hint">(optional)</span>
-            </label>
-            <textarea
-              value={form.extraNotes}
-              onChange={(e) => set("extraNotes", e.target.value)}
-              rows={3}
-              placeholder="Anything the agent should mention or ask…"
-            />
-          </div>
-        </div>
-      </div>
+          <Separator />
 
-      {/* CTA */}
-      <div className="cta-wrap">
-        <div className="window">
-          <span className="label">Booking window:</span>
-          <span className="val">{summary}</span>
-        </div>
-        <button className="cta" disabled={submitting}>
-          {submitting ? "Placing call…" : "Call & book"}
-        </button>
-        {error && <div className="err">{error}</div>}
-      </div>
-    </form>
+          {/* CTA */}
+          <div className="flex flex-col gap-3">
+            <div className="text-[13px] text-muted-foreground">
+              Booking window: <span className="font-semibold text-secondary-foreground">{summary}</span>
+            </div>
+            <Button type="submit" size="lg" disabled={submitting} className="w-full font-bold shadow-lg shadow-primary/25">
+              {submitting ? "Placing call…" : "Call & book"}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
