@@ -12,11 +12,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const { userId } = await auth();
   return (
     <ClerkProvider
-      localization={{
-        signIn: {
-          start: {
-            subtitle: "Sign in to your account",
-          },
+      appearance={{
+        elements: {
+          headerSubtitle: { display: "none" },
         },
       }}
     >
