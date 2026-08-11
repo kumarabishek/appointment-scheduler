@@ -1,13 +1,14 @@
 # Appointment Scheduler — Web (TypeScript / Next.js)
 
 The TypeScript port of the appointment-booking agent, with a **web app** entry
-point: fill out a form, hit *Call & book*, and watch the call's status update
-live on the dashboard. (The original Python prototype lives in `../app`.)
+point: walk the six-step booking wizard, hit *Call & book*, and watch the
+call's status update live in the **Calls** drawer. (The original Python
+prototype lives in `../app`.)
 
 Single-call hybrid flow: the agent calls the office and books a slot that fits
 your rules on the spot. If nothing fits, it applies the fallback you chose on
 the booking form (decline politely, or book the closest time anyway) and shows
-the result on the dashboard.
+the result in the Calls drawer.
 
 > Optional live approval: set `NTFY_TOPIC` to get a tap-to-pick push for edge
 > cases (the agent holds the line while you decide). Left blank, it's disabled
@@ -17,11 +18,12 @@ the result on the dashboard.
 
 | Layer | Tech | File |
 |---|---|---|
-| Front-end (form + live dashboard) | React / Next.js | `src/app/page.tsx` |
+| Front-end (booking wizard) | React / Next.js, Tailwind v4 + shadcn/ui | `src/components/booking-form.tsx` |
+| Live call status (drawer + polling) | React | `src/components/calls-sheet.tsx`, `src/hooks/use-calls.ts` |
 | Telephony + orchestration | **Vapi** | `src/lib/vapi.ts` |
-| Brain (LLM) | **Gemini Flash** (via Vapi) | `src/lib/agent.ts` |
-| Voice (TTS) | **ElevenLabs** (via Vapi) | `src/lib/agent.ts` |
-| Ears (STT) | **Deepgram** (via Vapi) | `src/lib/agent.ts` |
+| Brain (LLM) | **Gemini 3.5 Flash** (via Vapi) | `src/lib/agent.ts` |
+| Voice (TTS) | **Vapi voices** (`Elliot`) | `src/lib/agent.ts` |
+| Ears (STT) | **Deepgram Nova-3** (via Vapi) | `src/lib/agent.ts` |
 | Webhook + tool handling | Next API routes | `src/app/api/webhooks/vapi/route.ts` |
 | Green-zone matching | chrono-node | `src/lib/matching.ts` |
 | Live tap-to-approve (optional) | ntfy.sh + in-memory promises | `src/lib/push.ts`, `src/lib/decisions.ts` |
@@ -38,8 +40,11 @@ ngrok http 8000                   # paste https URL into PUBLIC_BASE_URL
 npm run dev                       # http://localhost:8000
 ```
 
-Provider keys (Gemini, ElevenLabs, Deepgram) go in the **Vapi dashboard →
-Providers**, not `.env.local`. Vapi makes those calls.
+Provider keys (Gemini, Deepgram) go in the **Vapi dashboard → Providers**, not
+`.env.local`. Vapi makes those calls. `.env.local` only *chooses* the
+provider/model/voice (`AGENT_MODEL`, `STT_MODEL`, `VOICE_PROVIDER`, `VOICE_ID`).
+The default voice is Vapi's own hosted `Elliot`, so no third-party TTS account
+sits in the path of a live call.
 
 ### Google Calendar (optional)
 

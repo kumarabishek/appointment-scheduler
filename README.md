@@ -7,9 +7,9 @@ tree, waits on hold, talks to the receptionist, and **books an appointment that
 fits your rules** — all in a single phone call. Built for the "spent 40 minutes
 on hold" problem.
 
-You fill in who it's for, where to call, and when works. The agent dials out,
-handles the conversation live, and books a slot inside your pre-set window —
-only pinging you if nothing fits.
+A short guided form asks who it's for, where to call, and when works. The agent
+dials out, handles the conversation live, and books a slot inside your pre-set
+window — only pinging you if nothing fits.
 
 Scoped to **existing patients** (the office already has the patient on file).
 New-patient registration is a different, longer call — the agent escalates to
@@ -19,20 +19,24 @@ you rather than attempt it.
 
 > **Note for reviewers:** the live app is gated behind sign-in (it handles
 > patient data), so this README is the best way to see what it does. The
-> screenshot above is the real UI; the architecture and code are below.
+> screenshot above is the real UI — step 4 of the booking wizard; the
+> architecture and code are below.
 
 ---
 
 ## What it actually does
 
-1. You submit a booking request (patient, office, reason, acceptable days/times).
+1. You submit a booking request through a six-step wizard — patient, office,
+   reason, acceptable days/times, optional insurance, then a review screen.
 2. The agent places a real outbound call via [Vapi](https://vapi.ai) (telephony + voice).
 3. It **navigates the office's IVR phone tree** by pressing touch-tone digits (DTMF),
    waits through hold music **without hanging up**, and talks to the operator.
 4. When the office offers times, the agent books one that fits your window **on the
    spot**. If nothing fits, it pushes you a tap-to-approve notification and holds
    the line for your answer.
-5. The booking lands on your calendar; the dashboard streams each call's status live.
+5. The booking lands on your calendar. A **Calls** drawer tracks every call in
+   flight — its badge shows the live count and turns amber the moment a call
+   needs you, so the status never competes with the form for screen space.
 
 ## Highlights
 
@@ -58,6 +62,12 @@ you rather than attempt it.
   > Calendar account are single global settings — a deployment serves **one
   > person/household**. Per-user topics and per-user Google OAuth are the known
   > follow-up for true multi-tenant use.
+- 🪄 **A booking flow that stays out of the way** — the request is a six-step
+  wizard (one topic per screen, `Enter` to advance, a review screen with inline
+  edit links) rather than one long form. Insurance is its own skippable step,
+  and your last booking prefills the next one. Live call status lives in a
+  slide-over **Calls** drawer whose badge pulses when a call needs you, so it
+  can't be missed and doesn't crowd the form.
 - ⚡ **Serverless-ready** — Next.js App Router on Vercel, Postgres (Neon) via Prisma.
 
 ## Architecture
@@ -66,7 +76,7 @@ you rather than attempt it.
  Browser (Next.js UI, Clerk auth)
         │  POST /api/requests
         ▼
- Next API (Vercel) ──places call──▶  Vapi  ──▶  Gemini (agent)  +  Deepgram (STT)  +  ElevenLabs (TTS)
+ Next API (Vercel) ──places call──▶  Vapi  ──▶  Gemini (agent)  +  Deepgram (STT)  +  Vapi voices (TTS)
         │                                            │
         │  ◀────── tool calls (webhook) ─────────────┘
         ▼            dtmf · decide_and_book · finalize_booking · get_patient_details
@@ -79,9 +89,10 @@ you rather than attempt it.
 | Concern | Tech |
 |---|---|
 | Web app + API | Next.js 15 (App Router), React 19, TypeScript |
+| UI | Tailwind CSS v4 + shadcn/ui, dark theme |
 | Telephony + voice orchestration | Vapi |
-| LLM (the agent's reasoning) | Google Gemini 2.5 Flash |
-| Speech-to-text / text-to-speech | Deepgram / ElevenLabs |
+| LLM (the agent's reasoning) | Google Gemini 3.5 Flash |
+| Speech-to-text / text-to-speech | Deepgram Nova-3 / Vapi voices |
 | Auth | Clerk |
 | Database | Postgres (Neon) + Prisma |
 | Hosting | Vercel (serverless) |
@@ -109,7 +120,9 @@ office asks to verify.
 
 ```
 web/                     # the Next.js application
-  src/app/               # UI (page.tsx) + API routes (requests, calls, decide, webhooks)
+  src/app/               # page shell + API routes (requests, calls, decide, webhooks)
+  src/components/        # booking wizard, calls drawer, call cards, shadcn/ui primitives
+  src/hooks/             # useCalls (polls /api/calls for live status)
   src/lib/               # agent prompt + tools, Vapi client, store (Prisma), crypto, booking logic
   prisma/                # schema + migrations
 docs/screenshot.png      # the UI shown above
