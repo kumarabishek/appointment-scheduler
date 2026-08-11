@@ -19,7 +19,7 @@ you rather than attempt it.
 
 > **Note for reviewers:** the live app is gated behind sign-in (it handles
 > patient data), so this README is the best way to see what it does. The
-> screenshot above is the real UI — step 4 of the booking wizard; the
+> screenshot above is the real UI — step 1 of the booking wizard; the
 > architecture and code are below.
 
 ---
