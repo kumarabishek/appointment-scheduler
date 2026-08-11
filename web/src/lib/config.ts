@@ -13,9 +13,12 @@ export const config = {
   llmProvider: env("LLM_PROVIDER", "google"),
   model: env("AGENT_MODEL", "gemini-2.5-flash"),
 
-  // Voice (TTS) — ElevenLabs, key in the Vapi dashboard.
-  voiceProvider: env("VOICE_PROVIDER", "11labs"),
-  elevenVoiceId: env("ELEVEN_VOICE_ID", "21m00Tcm4TlvDq8ikWAM"),
+  // Voice (TTS) — Vapi's own hosted voices, so there's no third-party TTS
+  // account (and no separate quota or key) in the path of a live call.
+  // Switching to "11labs" et al. requires that provider's key in the Vapi
+  // dashboard, and voiceId then becomes that provider's id.
+  voiceProvider: env("VOICE_PROVIDER", "vapi"),
+  voiceId: env("VOICE_ID", "Elliot"),
 
   // Ears (STT) — Deepgram, key in the Vapi dashboard.
   sttProvider: env("STT_PROVIDER", "deepgram"),

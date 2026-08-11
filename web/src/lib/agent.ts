@@ -321,7 +321,7 @@ export function buildAssistant(req: AppointmentRequest) {
       messages: [{ role: "system", content: buildSystemPrompt(req) }],
       tools: buildTools(),
     },
-    voice: { provider: config.voiceProvider, voiceId: config.elevenVoiceId },
+    voice: { provider: config.voiceProvider, voiceId: config.voiceId },
     transcriber: { provider: config.sttProvider, model: config.sttModel },
     // Don't barge in. IVR menus and operators speak with natural pauses; the
     // default ~0.4s wait makes the agent start talking over the tail of a prompt
