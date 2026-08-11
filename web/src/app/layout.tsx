@@ -11,7 +11,15 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { userId } = await auth();
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      localization={{
+        signIn: {
+          start: {
+            subtitle: "Sign in to your account, or create one to get started",
+          },
+        },
+      }}
+    >
       <html lang="en">
         <body>
           {userId && (
