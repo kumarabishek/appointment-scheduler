@@ -98,6 +98,11 @@ const STEPS = [
   { title: "Which office should we call?", sub: "The clinic, lab, or provider the agent will dial" },
   { title: "What's the visit for?", sub: "What to book, and how soon" },
   { title: "When works for you?", sub: "The agent only books inside these limits" },
+  {
+    title: "Insurance",
+    sub: "So the agent can verify coverage if the office asks — skip if you'd rather give it at check-in",
+    optional: true,
+  },
   { title: "Review & book", sub: "One last look before the agent dials" },
 ];
 
@@ -471,8 +476,28 @@ export function BookingForm({ onSubmitted }: { onSubmitted: () => Promise<void> 
               </div>
             )}
 
-            {/* -------- Step 5: Review & book -------- */}
+            {/* -------- Step 5: Insurance (optional) -------- */}
             {step === 4 && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Insurance provider">
+                  <Input
+                    value={form.insuranceProvider}
+                    onChange={(e) => set("insuranceProvider", e.target.value)}
+                    placeholder="e.g. Blue Shield"
+                  />
+                </Field>
+                <Field label="Member ID">
+                  <Input
+                    value={form.insuranceMemberId}
+                    onChange={(e) => set("insuranceMemberId", e.target.value)}
+                    placeholder="ID on your card"
+                  />
+                </Field>
+              </div>
+            )}
+
+            {/* -------- Step 6: Review & book -------- */}
+            {step === 5 && (
               <div className="flex flex-col gap-5">
                 <div className="divide-y rounded-xl border bg-muted/40 px-4 py-1">
                   <ReviewRow
@@ -495,28 +520,21 @@ export function BookingForm({ onSubmitted }: { onSubmitted: () => Promise<void> 
                     value={`${summary}${form.allowOutsideWindows ? " · closest time ok" : ""}`}
                     onEdit={() => goTo(3)}
                   />
+                  <ReviewRow
+                    label="Insurance"
+                    value={
+                      form.insuranceProvider || form.insuranceMemberId
+                        ? [form.insuranceProvider, form.insuranceMemberId].filter(Boolean).join(" · ")
+                        : "Not provided — will offer at check-in"
+                    }
+                    onEdit={() => goTo(4)}
+                  />
                 </div>
 
                 <Separator />
 
                 <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   Optional details
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Insurance provider">
-                    <Input
-                      value={form.insuranceProvider}
-                      onChange={(e) => set("insuranceProvider", e.target.value)}
-                      placeholder="e.g. Blue Shield"
-                    />
-                  </Field>
-                  <Field label="Member ID">
-                    <Input
-                      value={form.insuranceMemberId}
-                      onChange={(e) => set("insuranceMemberId", e.target.value)}
-                      placeholder="ID on your card"
-                    />
-                  </Field>
                 </div>
                 <Field label="Callback number" hint="— only if the agent gets stuck">
                   <Input
@@ -546,6 +564,16 @@ export function BookingForm({ onSubmitted }: { onSubmitted: () => Promise<void> 
               </Button>
             )}
             <div className="flex-1" />
+            {STEPS[step].optional && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => goTo(step + 1)}
+                className="text-muted-foreground"
+              >
+                Skip
+              </Button>
+            )}
             {step < STEPS.length - 1 ? (
               <Button type="submit" size="lg" className="min-w-36 font-bold">
                 Continue

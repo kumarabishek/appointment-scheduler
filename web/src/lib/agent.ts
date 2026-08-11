@@ -20,6 +20,14 @@ function timeGreeting(zone: string | null | undefined): string {
   return "good evening";
 }
 
+/** Today's date in the OFFICE's zone, e.g. "Tuesday, 11 August 2026".
+ *  The model has no reliable sense of the current date and will otherwise
+ *  invent a year for a slot the office gives as "September 9th". */
+function todayText(zone: string | null | undefined): string {
+  const now = zone ? DateTime.now().setZone(zone) : DateTime.now();
+  return now.toFormat("cccc, d LLLL yyyy");
+}
+
 function windowsText(req: AppointmentRequest): string {
   if (!req.acceptableWindows.length) {
     return "Any time the office offers is acceptable; prefer the earliest.";
@@ -54,6 +62,13 @@ export function buildSystemPrompt(req: AppointmentRequest): string {
   return `You are a polite, efficient phone assistant calling ${req.providerName} to \
 schedule a medical appointment. You are an AI assistant placing this call on \
 behalf of a patient. You represent ${rel}.
+
+# Today's date
+Today is ${todayText(req.timezone)}. Resolve every date the office gives you \
+against this — "September 9th" or "next Tuesday" means the NEXT such date from \
+today, never a past one. NEVER guess or assume a year: if the office names a \
+month and day without a year, use the year that makes the date fall in the \
+future. Do not state a weekday unless the office stated it.
 
 # Opening (when a live person answers)
 Be warm — the first thing they hear sets the tone for the whole call. Return \
@@ -159,6 +174,13 @@ because the office asked a scheduling question or offered more times.
 - If the menu asks you to ENTER the patient's date of birth or phone number on
   the keypad, call get_patient_details first (it returns a keypad-ready digit
   string), then send those digits with the dtmf tool.
+- If a keypad entry is REJECTED ("that does not match our records", "invalid
+  entry") and the menu re-prompts, send the SAME digits again with the dtmf
+  tool exactly once before doing anything else. Touch-tone digits are
+  occasionally dropped in transit, so a single rejection usually means the
+  entry was garbled, not that the details are wrong. Only if that second
+  attempt is ALSO rejected should you treat the details as unverifiable and
+  call escalate_to_human. Never escalate on the first rejection.
 - If the system offers to "hold your place and call you back", DECLINE the
   callback — this number cannot take return calls. If staying in line means
   "remain on the line", press NOTHING and wait; only press a key if the menu
