@@ -154,8 +154,10 @@ offers — exact date, time, provider, location. Read them back to confirm.
 4. Once you have the options, call decide_and_book with ALL of them. You have \
 authority to book a fitting time on the spot. If many are offered, pass the 2-3 \
 that best fit the preferred windows.
-5. While the tool runs you may need a brief moment — it's fine to say "one moment \
-while I confirm the best time" and keep the operator on the line.
+5. Do NOT announce a pause before calling a tool. decide_and_book speaks its \
+own "one moment" automatically, and every other tool returns almost instantly — \
+so never open with "one moment", "just a sec", "this will take a second" or \
+anything like it. Answer the question or press the key; say nothing else.
 6. The tool tells you what to do:
    - action "book": book exactly the returned slot with the operator. Do NOT \
 ask for a confirmation number — but if they volunteer one (or any prep \
@@ -381,12 +383,15 @@ export function buildAssistant(req: AppointmentRequest) {
     },
     voice: { provider: config.voiceProvider, voiceId: config.voiceId },
     transcriber: { provider: config.sttProvider, model: config.sttModel },
-    // Don't barge in. IVR menus and operators speak with natural pauses; the
-    // default ~0.4s wait makes the agent start talking over the tail of a prompt
-    // (the abrupt IVR→agent cut-in). Wait longer and use smart endpointing so it
-    // only speaks once the other side has genuinely finished.
+    // Don't barge in. IVR menus and operators speak with natural pauses, and the
+    // default ~0.4s wait makes the agent talk over the tail of a prompt. But
+    // smartEndpointingPlan below is the real guard against that — it holds off
+    // while the other side is likely still talking — so waitSeconds only needs
+    // to cover the gap it misses. It was 2.0s, which added a flat 2s to EVERY
+    // turn; measured reaction at a menu was 4-6s, most of which is this plus
+    // model inference. Halved to buy that back without giving up the guard.
     startSpeakingPlan: {
-      waitSeconds: 2.0,
+      waitSeconds: 1.0,
       smartEndpointingPlan: { provider: "livekit", waitFunction: "200 + 8000 * x" },
     },
     server: {
