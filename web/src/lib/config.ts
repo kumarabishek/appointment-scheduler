@@ -56,6 +56,11 @@ export const config = {
   // the TwiML and learn/ring the operator number. Set TEST_IVR_ENABLED=true only
   // while actively testing.
   testIvrEnabled: env("TEST_IVR_ENABLED") === "true",
+  // Which menu the fake IVR ANSWERS on. "main" is the normal happy path; set
+  // this to a failure-mode branch ("records", "account", "machine") to rehearse
+  // a dead end, an account-number wall, or a closed office. Unknown names fall
+  // back to "main". A ?menu= query param on /api/test-ivr overrides it per call.
+  testIvrStartMenu: env("TEST_IVR_START_MENU", "main"),
 
   // Public URL for inbound webhooks (ngrok in dev).
   publicBaseUrl: env("PUBLIC_BASE_URL").replace(/\/$/, ""),

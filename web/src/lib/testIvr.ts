@@ -152,7 +152,12 @@ export function twimlResponse(xml: string): Response {
 /** Render a menu as a Gather (or a terminal say+hangup if it has no options).
  *  `prefix` lets us prepend a "that wasn't valid" note when reprompting. */
 export function renderMenu(menuKey: string, prefix = "", attempt = 1): string {
-  const menu = MENUS[menuKey] ?? MENUS.main;
+  // Resolve the key BEFORE building URLs: an unknown name falls back to main,
+  // and the Gather/Redirect must then say "main" too. Stamping the bogus name
+  // into the action URL would leave the caller hearing one menu while the next
+  // hop pointed at another.
+  const key = MENUS[menuKey] ? menuKey : "main";
+  const menu = MENUS[key];
   if (Object.keys(menu.options).length === 0) {
     return `<Response>\n  ${SAY(prefix + menu.prompt)}\n  <Hangup/>\n</Response>`;
   }
@@ -164,14 +169,14 @@ export function renderMenu(menuKey: string, prefix = "", attempt = 1): string {
     menu.timeoutTarget === "CONNECT"
       ? connectBody()
       : attempt < 2
-        ? `<Redirect method="POST">/api/test-ivr/handle-key?menu=${menuKey}&amp;reprompt=2</Redirect>`
+        ? `<Redirect method="POST">/api/test-ivr/handle-key?menu=${key}&amp;reprompt=2</Redirect>`
         : `${SAY("Sorry, we did not receive your selection. Goodbye.")}\n  <Hangup/>`;
   // Hybrid menus accept speech AND keypresses; hints help Twilio's recognizer.
   const input = menu.speech
     ? ` input="speech dtmf" speechTimeout="auto" hints="appointment, schedule, reschedule, checkup, lab, blood work, billing"`
     : "";
   return `<Response>
-  <Gather numDigits="${menu.numDigits ?? 1}"${input} action="/api/test-ivr/handle-key?menu=${menuKey}" method="POST" timeout="10">
+  <Gather numDigits="${menu.numDigits ?? 1}"${input} action="/api/test-ivr/handle-key?menu=${key}" method="POST" timeout="10">
     ${SAY(prefix + menu.prompt)}
   </Gather>
   ${afterGather}

@@ -93,6 +93,13 @@ function checkTransitions() {
   ok("no operator shortcut on appointments", !("0" in MENUS.appointments.options));
   ok("no operator shortcut on the DOB gate", !("0" in MENUS.dob.options));
 
+  // TEST_IVR_START_MENU points at these by name — a rename must fail here
+  // rather than silently leaving the env var aimed at nothing.
+  for (const m of ["main", "records", "account", "machine"]) {
+    ok(`start-menu target "${m}" exists`, m in MENUS);
+  }
+  ok("unknown start menu falls back to main", renderMenu("nope").includes("menu=main"));
+
   // Speech-driven main menu (hybrid: speech + DTMF both accepted).
   const say = (menu: string, phrase: string, needle: string) =>
     transition(menu, "", phrase).includes(needle);
