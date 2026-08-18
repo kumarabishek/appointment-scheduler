@@ -9,6 +9,12 @@
  *   existing-patient checkup → 1 (appointments) → 2 (reschedule)
  *                            → key in DOB (01011990) → decline callback  [4 levels]
  *   new primary-care visit   → 1 (appointments) → 1 (new) → 1 (primary)  [3 levels]
+ *
+ * Three unannounced branches off the main menu exist to rehearse failure modes
+ * rather than the happy path: 3 = a dead end that loops on itself, 4 = a wall
+ * demanding an account number the agent was never given, 6 = a closed office
+ * whose machine answers. The scheduling path deliberately has NO 0-to-operator
+ * shortcut, so the DOB gate still has to be navigated properly.
  */
 import { config } from "./config";
 
@@ -40,7 +46,17 @@ export const MENUS: Record<string, Menu> = {
     // test. (Humans doing manual runs can still press 1/2/9.)
     prompt:
       "Thank you for calling Wellness Partners. In a few words, please tell me the reason for your call — for example, scheduling an appointment, or billing.",
-    options: { "1": "appointments", "2": "billing", "9": "main" },
+    // 3/4/6 are deliberately UNANNOUNCED failure-mode branches used in
+    // rehearsals: a dead end, an account-number wall, and a closed office.
+    // 5 stays unmapped on purpose — the invalid-entry test depends on it.
+    options: {
+      "1": "appointments",
+      "2": "billing",
+      "3": "records",
+      "4": "account",
+      "6": "machine",
+      "9": "main",
+    },
     speech: {
       appointment: "appointments",
       schedul: "appointments",
@@ -87,6 +103,35 @@ export const MENUS: Record<string, Menu> = {
   callback_accepted: {
     // Terminal: for the agent this is a FAILED call (ends with no booking).
     prompt: "Thank you. You will receive a callback within two business days. Goodbye.",
+    options: {},
+  },
+  // Dead end: a real branch with NO route to scheduling. 1 and 2 loop straight
+  // back here, so an agent that keeps pressing gets nowhere; the only ways out
+  // are the operator escape (0) or backing out to main (9). Exercises the
+  // "same menu twice means you're going in circles" rule.
+  records: {
+    prompt:
+      "Medical records. To request records by fax, press 1. To check the status of an existing request, press 2. To go back, press 9.",
+    options: { "0": "CONNECT", "1": "records", "2": "records", "9": "main" },
+    invalidPrompt: "Sorry, that isn't a valid option. ",
+  },
+  // Identity wall: demands a number the caller was never given. Nothing the
+  // agent holds can satisfy it, so the correct move is to stop guessing and
+  // take the operator escape rather than invent an account number. (Twilio
+  // submits whatever it has when the Gather times out, so a lone 0 still
+  // reaches CONNECT despite numDigits.)
+  account: {
+    prompt:
+      "Please enter your six digit account number. If you do not have your account number, press 0 to speak with staff.",
+    options: { "0": "CONNECT" },
+    numDigits: 6,
+    invalidPrompt: "We could not find that account number. ",
+  },
+  // Closed office: an answering machine picks up instead of a hold queue.
+  // Terminal — the agent must leave NO patient details, just end the call.
+  machine: {
+    prompt:
+      "You have reached Wellness Partners. Our office is closed. Our hours are Monday through Friday, nine AM to five PM. Please leave your name and number after the tone and we will return your call.",
     options: {},
   },
   billing: {

@@ -61,6 +61,38 @@ function checkTransitions() {
     renderMenu("callback").includes("Please hold for the next available scheduler"),
   );
 
+  // Dead-end branch (main 3): no route to scheduling, loops on itself, and the
+  // only exits are the operator escape or backing out.
+  ok("main 3 → records dead end", has("main", "3", "menu=records"));
+  ok("records 1 → loops back to itself", has("records", "1", "menu=records"));
+  ok("records 2 → loops back to itself", has("records", "2", "menu=records"));
+  ok("records 9 → backs out to main", has("records", "9", "menu=main"));
+  ok("records 0 → operator escape", has("records", "0", "Please hold"));
+
+  // Account wall (main 4): demands a number the agent was never given, so any
+  // guess must be rejected and 0 must be the way through.
+  ok("main 4 → account wall", has("main", "4", "menu=account"));
+  ok("account gathers 6 digits", renderMenu("account").includes('numDigits="6"'));
+  ok(
+    "account guessed number → rejected, re-asks",
+    has("account", "123456", "could not find that account number") &&
+      has("account", "123456", "menu=account"),
+  );
+  ok("account 0 → operator escape", has("account", "0", "Please hold"));
+
+  // Closed office (main 6): a machine answers instead of a queue — terminal,
+  // with no Gather to key into.
+  ok("main 6 → answering machine", has("main", "6", "Our office is closed"));
+  ok(
+    "answering machine hangs up without a menu",
+    has("main", "6", "<Hangup/>") && !has("main", "6", "<Gather"),
+  );
+
+  // The scheduling path must NOT offer a 0 shortcut, or rehearsals would skip
+  // the DOB gate entirely.
+  ok("no operator shortcut on appointments", !("0" in MENUS.appointments.options));
+  ok("no operator shortcut on the DOB gate", !("0" in MENUS.dob.options));
+
   // Speech-driven main menu (hybrid: speech + DTMF both accepted).
   const say = (menu: string, phrase: string, needle: string) =>
     transition(menu, "", phrase).includes(needle);
@@ -127,6 +159,13 @@ function checkSequences() {
   ok("new specialist 1→1→2 reaches operator", reaches(["1", "1", "2"], "CONNECT"));
   ok("billing 2 ends (no connect)", lands(["2"], "billing"));
   ok("back-nav 1→1→9 returns to appointments", lands(["1", "1", "9"], "appointments"));
+
+  // Failure-mode branches: pressing on inside the dead end never escapes it,
+  // but the operator key does — from the dead end and from the account wall.
+  ok("dead end loops no matter how long you press", lands(["3", "1", "2", "1"], "records"));
+  ok("dead end 3→0 escapes to a human", reaches(["3", "0"], "CONNECT"));
+  ok("account wall 4→0 escapes to a human", reaches(["4", "0"], "CONNECT"));
+  ok("closed office 6 lands on the machine", lands(["6"], "machine"));
 }
 
 /** Every non-special menu target points at a real menu (no dangling keys). */
