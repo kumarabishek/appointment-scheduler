@@ -298,11 +298,15 @@ export function buildTools() {
     },
     {
       type: "function",
+      // NO request-start message, deliberately. Vapi speaks these as the
+      // agent's OWN turn, so a "one moment" here lands in the transcript as
+      // something the agent said — an in-context example it then imitates
+      // before every other tool ("1 moment." ahead of dtmf, ahead of answering
+      // a question, even ahead of saying goodbye). The prompt's ban on filler
+      // kept losing to that demonstration. In practice this tool returns in
+      // ~2s, so there is no gap to fill; only the slow tap-to-approve path
+      // needs a word, and request-response-delayed covers that at 15s.
       messages: [
-        {
-          type: "request-start",
-          content: "One moment while I confirm the best time.",
-        },
         // decide_and_book can hold the line up to DECISION_TIMEOUT_SECONDS
         // (~45s) waiting for a tap-to-approve. Reassure the operator partway
         // through instead of leaving dead air.
