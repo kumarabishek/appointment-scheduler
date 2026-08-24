@@ -43,6 +43,17 @@ export async function dispatchTool(
 /** Just-in-time PHI: return DOB / insurance only when the office asks, so these
  *  values aren't carried in the system prompt the LLM sees every turn. `rec`
  *  comes from the store already decrypted. */
+/** The 10 significant digits of a North American number, or null if it isn't
+ *  one. Accepts E.164 (+14155550142), a bare 10 digits, or a leading 1; a
+ *  number that doesn't fit is returned as null so it gets spoken as stored
+ *  rather than regrouped into nonsense. North America only — the app doesn't
+ *  call anywhere else. */
+function nanpDigits(raw: string): string | null {
+  const digits = raw.replace(/\D/g, "");
+  const n = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
+  return /^\d{10}$/.test(n) ? n : null;
+}
+
 /** MMDDYYYY digits for keying a YYYY-MM-DD date of birth into an IVR. */
 function keypadDob(dob: string): string | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dob);
@@ -61,7 +72,24 @@ function getPatientDetails(rec: CallRecord, args: Args): string {
     );
   }
   if (asked.includes("callback_number")) {
-    out.push(`Callback number: ${p.callbackNumber || "not on file"}`);
+    const raw = p.callbackNumber?.trim();
+    const n = raw ? nanpDigits(raw) : null;
+    if (!raw) {
+      out.push("Callback number: not on file");
+    } else if (n) {
+      // Ten digits in one breath is what the office mishears. On the first real
+      // call this number took FIVE attempts and only landed once the agent
+      // regrouped it unprompted ("602, then 687, then 0958") — so hand over the
+      // grouping instead of waiting for a failure to provoke it. The dtmf form
+      // stays bare: punctuation here would be keyed literally and rejected.
+      out.push(
+        `Callback number: ${n.slice(0, 3)}-${n.slice(3, 6)}-${n.slice(6)}` +
+          " (say it as three groups with a pause between each, never as one run;" +
+          ` to key into a phone menu, dtmf: ${n})`,
+      );
+    } else {
+      out.push(`Callback number: ${raw}`);
+    }
   }
   if (asked.includes("postal_code")) {
     // Zip is digits already, so it doubles as its own keypad string. US zips
