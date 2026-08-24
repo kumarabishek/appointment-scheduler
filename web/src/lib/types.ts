@@ -14,6 +14,10 @@ export const Patient = z.object({
   insuranceProvider: z.string().nullish(),
   insuranceMemberId: z.string().nullish(),
   callbackNumber: z.string().nullish(),
+  // Real offices pair the DOB with a second identifier at the verification
+  // gate — Sutter's AI receptionist asks for DOB *then* zip before it will
+  // route to scheduling. Nullish because stored records predate this field.
+  postalCode: z.string().nullish(),
 });
 export type Patient = z.infer<typeof Patient>;
 

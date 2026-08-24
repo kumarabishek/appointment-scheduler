@@ -12,9 +12,10 @@
     "google-auth": "tsx scripts/google-auth.ts",
     "place-call": "tsx scripts/place-call.ts",
     "test:ivr": "tsx scripts/test-ivr/check-paths.ts",
+    "test:prefill": "tsx scripts/test-prefill.ts",
     "postinstall": "prisma generate",
     "test:matching": "tsx scripts/test-matching/check-matching.ts",
-    "test": "npm run test:ivr && npm run test:matching"
+    "test": "npm run test:ivr && npm run test:matching && npm run test:prefill"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

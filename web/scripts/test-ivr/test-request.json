@@ -2,6 +2,7 @@
   "patient": {
     "name": "Test Patient",
     "dateOfBirth": "1990-01-01",
+    "postalCode": "94301",
     "callerRelationship": "self",
     "insuranceProvider": "Test Health",
     "insuranceMemberId": "TEST123456",

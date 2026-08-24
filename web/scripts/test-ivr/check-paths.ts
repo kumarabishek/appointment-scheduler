@@ -43,12 +43,23 @@ function checkTransitions() {
 
   // DOB gate: collects 8 digits; only the test patient's MMDDYYYY advances.
   ok("dob gathers 8 digits", renderMenu("dob").includes('numDigits="8"'));
-  ok("dob correct entry → callback offer", has("dob", "01011990", "menu=callback"));
+  ok("dob correct entry → zip gate", has("dob", "01011990", "menu=zip"));
   ok(
     "dob wrong entry → reprompt",
     has("dob", "12345678", "does not match our records") &&
       has("dob", "12345678", "menu=dob"),
   );
+
+  // Zip gate: the SECOND identifier real offices ask for after the DOB. An
+  // agent that can only supply a date of birth must fail here, not sail past.
+  ok("zip gathers 5 digits", renderMenu("zip").includes('numDigits="5"'));
+  ok("zip correct entry → callback offer", has("zip", "94301", "menu=callback"));
+  ok(
+    "zip wrong entry → reprompt",
+    has("zip", "99999", "does not match the patient's record") &&
+      has("zip", "99999", "menu=zip"),
+  );
+  ok("no operator shortcut on the zip gate", !("0" in MENUS.zip.options));
 
   // Callback offer: pressing 1 is the wrong move (call ends, no booking);
   // silence times out into hold → operator.
@@ -153,13 +164,14 @@ function checkSequences() {
   const lands = (digits: string[], menu: string) => walk(digits).menu === menu;
 
   ok("existing patient 1→2 reaches DOB gate", lands(["1", "2"], "dob"));
+  ok("existing patient 1→2→DOB reaches zip gate", lands(["1", "2", "01011990"], "zip"));
   ok(
-    "existing patient 1→2→DOB reaches callback offer",
-    lands(["1", "2", "01011990"], "callback"),
+    "existing patient 1→2→DOB→zip reaches callback offer",
+    lands(["1", "2", "01011990", "94301"], "callback"),
   );
   ok(
     "accepting the callback ends the call (failure path)",
-    lands(["1", "2", "01011990", "1"], "callback_accepted"),
+    lands(["1", "2", "01011990", "94301", "1"], "callback_accepted"),
   );
   ok("lab 1→3 reaches operator", reaches(["1", "3"], "CONNECT"));
   ok("new primary 1→1→1 reaches operator", reaches(["1", "1", "1"], "CONNECT"));
