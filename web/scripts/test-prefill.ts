@@ -1,7 +1,13 @@
 /** What the booking wizard is allowed to remember between sessions.
  *  Guards two things: the office/doctor never carry over, and patient details
  *  always do — including through payloads written before the split existed. */
-import { PER_CALL_FIELDS, persistable, restorable } from "../src/lib/prefill";
+import {
+  LEGACY_PREFILL_KEY,
+  NEVER_REMEMBERED,
+  persistable,
+  prefillKey,
+  restorable,
+} from "../src/lib/prefill";
 
 let pass = 0;
 let fail = 0;
@@ -44,13 +50,16 @@ const kept = persistable(FORM);
 for (const f of ["patientName", "dateOfBirth", "postalCode", "callerRelationship"]) {
   ok(`${f} persists`, f in kept);
 }
-for (const f of ["insuranceProvider", "insuranceMemberId", "callbackNumber"]) {
+for (const f of ["insuranceProvider", "callbackNumber"]) {
   ok(`${f} persists`, f in kept);
 }
+// The carrier name is remembered; the member ID deliberately is not.
+ok("insuranceMemberId is NOT persisted", !("insuranceMemberId" in kept));
+ok("insuranceProvider still is", kept.insuranceProvider === "Test Health");
 ok("scheduling windows persist", "days" in kept && "earliest" in kept);
 
-console.log("Per-call fields never persist:");
-for (const f of ["providerName", "providerPhone", "preferredProvider", "timezone"]) {
+console.log("Never-remembered fields:");
+for (const f of ["providerName", "providerPhone", "preferredProvider", "timezone", "insuranceMemberId"]) {
   ok(`${f} dropped on write`, !(f in kept));
 }
 
@@ -58,7 +67,7 @@ console.log("Restore:");
 // A payload written by the OLD code, carrying office + doctor fields.
 const legacy = { ...FORM };
 const restored = restorable(legacy, FORM);
-for (const f of ["providerName", "providerPhone", "preferredProvider", "timezone"]) {
+for (const f of ["providerName", "providerPhone", "preferredProvider", "timezone", "insuranceMemberId"]) {
   ok(`legacy ${f} not restored`, !(f in restored));
 }
 ok("legacy patient details still restored", restored.patientName === "Test Patient");
@@ -69,8 +78,21 @@ ok(
 );
 ok("round-trip is stable", JSON.stringify(restorable(persistable(FORM) as Record<string, unknown>, FORM)) === JSON.stringify(kept));
 ok(
-  "every per-call field is a real form key",
-  [...PER_CALL_FIELDS].every((f) => f in FORM),
+  "every never-remembered field is a real form key",
+  [...NEVER_REMEMBERED].every((f) => f in FORM),
+);
+
+console.log("Per-user scoping:");
+ok("two users get different keys", prefillKey("user_aaa") !== prefillKey("user_bbb"));
+ok("the same user gets a stable key", prefillKey("user_aaa") === prefillKey("user_aaa"));
+ok("the user id is what scopes the key", prefillKey("user_aaa").includes("user_aaa"));
+ok(
+  "no scoped key can collide with the legacy one",
+  prefillKey("user_aaa") !== LEGACY_PREFILL_KEY,
+);
+ok(
+  "the legacy key is not a prefix match for a scoped key",
+  !prefillKey("user_aaa").startsWith(LEGACY_PREFILL_KEY + "_"),
 );
 
 console.log(fail === 0 ? `\n✅ ${pass} passed, 0 failed` : `\n❌ ${pass} passed, ${fail} failed`);
