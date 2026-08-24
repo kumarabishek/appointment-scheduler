@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { persistable, restorable } from "@/lib/prefill";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -75,24 +76,29 @@ const EMPTY_FORM = {
 };
 type FormState = typeof EMPTY_FORM;
 
-// Last successful booking, kept on this device so repeat bookings are mostly
-// Enter-Enter-Enter. Cleared by the browser, never sent anywhere.
+// Patient details are remembered on this device between sessions; the office
+// and doctor are not (see PER_CALL_FIELDS). localStorage — cleared by the
+// browser, never sent anywhere.
 const PREFILL_KEY = "booking-prefill";
 
 function loadPrefill(): Partial<FormState> | null {
   try {
     const raw = localStorage.getItem(PREFILL_KEY);
     if (!raw) return null;
-    const saved = JSON.parse(raw) as Record<string, unknown>;
-    const picked: Record<string, unknown> = {};
-    for (const key of Object.keys(EMPTY_FORM)) {
-      if (key in saved) picked[key] = saved[key];
-    }
-    return picked as Partial<FormState>;
+    return restorable(JSON.parse(raw) as Record<string, unknown>, EMPTY_FORM);
   } catch {
     return null;
   }
 }
+
+function savePrefill(form: FormState) {
+  try {
+    localStorage.setItem(PREFILL_KEY, JSON.stringify(persistable(form)));
+  } catch {
+    /* prefill is best-effort */
+  }
+}
+
 
 const STEPS = [
   { title: "Who's this for?", sub: "The patient on record at the office" },
@@ -194,6 +200,12 @@ export function BookingForm({ onSubmitted }: { onSubmitted: () => Promise<void> 
     set("days", form.days.includes(d) ? form.days.filter((x) => x !== d) : [...form.days, d]);
   }
 
+  // Guards the save-on-change effect below. Both effects run in the SAME mount
+  // commit, and the hydrating setForm above only queues an update — so the
+  // save effect's first run still sees EMPTY_FORM. Skipping that first run is
+  // what stops it from erasing the very prefill we just read.
+  const hydrated = useRef(false);
+
   useEffect(() => {
     const prefill = loadPrefill();
     if (prefill) setForm((f) => ({ ...f, ...prefill }));
@@ -204,6 +216,17 @@ export function BookingForm({ onSubmitted }: { onSubmitted: () => Promise<void> 
       /* leave blank; server falls back */
     }
   }, []);
+
+  // Persist as you type, not just on a successful booking — otherwise patient
+  // details entered in a session that never placed a call are lost, which is
+  // exactly the retyping this is meant to remove.
+  useEffect(() => {
+    if (!hydrated.current) {
+      hydrated.current = true;
+      return;
+    }
+    savePrefill(form);
+  }, [form]);
 
   const summary = useMemo(
     () => `${daysSummary(form.days)} · ${to12(form.earliest)}–${to12(form.latest)} · ${URGENCY_LABEL[form.urgency]}`,
@@ -261,11 +284,6 @@ export function BookingForm({ onSubmitted }: { onSubmitted: () => Promise<void> 
       if (!res.ok) {
         toast.error(data.error || "Failed to place call.");
       } else {
-        try {
-          localStorage.setItem(PREFILL_KEY, JSON.stringify(form));
-        } catch {
-          /* prefill is best-effort */
-        }
         toast.success("Call placed — the agent is dialing the office.");
         goTo(0);
         await onSubmitted();
