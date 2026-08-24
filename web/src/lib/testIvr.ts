@@ -87,9 +87,21 @@ export const MENUS: Record<string, Menu> = {
     prompt:
       "To access scheduling, please enter the patient's date of birth using your keypad: two digits for the month, two digits for the day, and four digits for the year.",
     // Must match the DOB in scripts/test-ivr/test-request.json (1990-01-01 → MMDDYYYY).
-    options: { "01011990": "callback" },
+    options: { "01011990": "zip" },
     numDigits: 8,
     invalidPrompt: "That does not match our records. ",
+  },
+  // Second identity gate, modeled on the real Sutter Health line (2026-08-23):
+  // its AI receptionist asks for the date of birth and then, as a SEPARATE
+  // follow-up turn, the zip code — and will not route to scheduling without
+  // both. Nothing in the old tree tested a second identifier, so an agent that
+  // could only supply a DOB looked fine here and would stall on a real call.
+  zip: {
+    prompt: "And the patient's five digit zip code, please.",
+    // Must match postalCode in scripts/test-ivr/test-request.json.
+    options: { "94301": "callback" },
+    numDigits: 5,
+    invalidPrompt: "That zip code does not match the patient's record. ",
   },
   // Callback-queue offer: pressing 1 is the WRONG move (the agent's number
   // can't take return calls) — the correct behavior is to stay silent, which

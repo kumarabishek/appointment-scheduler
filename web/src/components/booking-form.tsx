@@ -54,6 +54,7 @@ function daysSummary(days: string[]): string {
 const EMPTY_FORM = {
   patientName: "",
   dateOfBirth: "",
+  postalCode: "",
   callerRelationship: "self",
   insuranceProvider: "",
   insuranceMemberId: "",
@@ -226,6 +227,7 @@ export function BookingForm({ onSubmitted }: { onSubmitted: () => Promise<void> 
       patient: {
         name: form.patientName,
         dateOfBirth: form.dateOfBirth,
+        postalCode: form.postalCode || null,
         callerRelationship: form.callerRelationship,
         insuranceProvider: form.insuranceProvider || null,
         insuranceMemberId: form.insuranceMemberId || null,
@@ -327,6 +329,20 @@ export function BookingForm({ onSubmitted }: { onSubmitted: () => Promise<void> 
                       required
                     />
                   </Field>
+                  {/* Offices verify on date of birth AND a second field — 
+                      usually the zip on file. Without it the agent can stall
+                      at the verification gate before it ever reaches booking. */}
+                  <Field label="Zip code">
+                    <Input
+                      inputMode="numeric"
+                      value={form.postalCode}
+                      onChange={(e) => set("postalCode", e.target.value)}
+                      placeholder="On file with the office"
+                      required
+                    />
+                  </Field>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Your relationship">
                     <Select
                       value={form.callerRelationship}
@@ -502,7 +518,7 @@ export function BookingForm({ onSubmitted }: { onSubmitted: () => Promise<void> 
                 <div className="divide-y rounded-xl border bg-muted/40 px-4 py-1">
                   <ReviewRow
                     label="Patient"
-                    value={`${form.patientName} · ${form.dateOfBirth} · ${form.callerRelationship}`}
+                    value={`${form.patientName} · ${form.dateOfBirth}${form.postalCode ? ` · ${form.postalCode}` : ""} · ${form.callerRelationship}`}
                     onEdit={() => goTo(0)}
                   />
                   <ReviewRow

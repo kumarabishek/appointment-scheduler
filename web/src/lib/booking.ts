@@ -63,6 +63,17 @@ function getPatientDetails(rec: CallRecord, args: Args): string {
   if (asked.includes("callback_number")) {
     out.push(`Callback number: ${p.callbackNumber || "not on file"}`);
   }
+  if (asked.includes("postal_code")) {
+    // Zip is digits already, so it doubles as its own keypad string. US zips
+    // are the common case; anything non-numeric (UK, CA) can only be spoken.
+    const zip = p.postalCode?.trim();
+    const keyable = zip && /^\d+$/.test(zip);
+    out.push(
+      zip
+        ? `Zip code: ${zip}` + (keyable ? ` (to key into a phone menu, dtmf: ${zip})` : "")
+        : "Zip code: not on file — do NOT guess one; offer another identifier or ask for staff",
+    );
+  }
   if (asked.includes("insurance")) {
     out.push(
       p.insuranceProvider

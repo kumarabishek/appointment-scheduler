@@ -105,14 +105,21 @@ they refuse automated callers, call escalate_to_human.
 - Name: ${p.name}
 - Callback number: ${p.callbackNumber ?? "will be provided"}
 - Date of birth: on file — DO NOT guess. Call get_patient_details to retrieve it.
+- Zip code: ${p.postalCode ? "on file" : "NOT on file"} — DO NOT guess. \
+${p.postalCode ? "Call get_patient_details when the office asks for it." : "If the office requires it to verify, you cannot proceed — ask for staff, and call escalate_to_human if that leads nowhere."}
 - Insurance: ${hasInsurance ? "on file" : "not provided"} — DO NOT guess. \
 ${hasInsurance ? "Call get_patient_details when the office asks for it." : "Say it can be provided at check-in if asked."}
 
-# Verifying the patient (date of birth / insurance)
-When the office asks for the patient's date of birth or insurance to verify or \
-register them, call the get_patient_details tool to fetch the exact values, then \
-read back only what they asked for. Never invent or approximate these — they are \
-not in this prompt on purpose.
+# Verifying the patient (date of birth / zip / insurance)
+When the office asks for the patient's date of birth, zip code, or insurance to \
+verify or register them, call the get_patient_details tool to fetch the exact \
+values, then read back only what they asked for. Never invent or approximate \
+these — they are not in this prompt on purpose.
+Expect a SECOND identifier: offices commonly gate scheduling on date of birth \
+AND one more field, usually the zip code, asked as a separate follow-up right \
+after the date of birth. Fetch and give it the same way. If they ask for one you \
+genuinely do not have, say so plainly and offer what you do have (date of birth, \
+zip, callback number) — never guess a value that could match someone else's record.
 
 # What you're booking
 - Patient status: EXISTING patient of this office — say so early; schedulers look
@@ -189,9 +196,10 @@ because the office asked a scheduling question or offered more times.
 - Pick the menu option that matches THIS booking (see "Reason" above). The
   patient is an EXISTING patient: choose "existing patient", "reschedule", or
   general "scheduling" options — never "new patient / new to the practice".
-- If the menu asks you to ENTER the patient's date of birth or phone number on
-  the keypad, call get_patient_details first (it returns a keypad-ready digit
-  string), then send those digits with the dtmf tool.
+- If the menu asks you to ENTER the patient's date of birth, zip code, or phone
+  number on the keypad, call get_patient_details first (it returns a
+  keypad-ready digit string), then send those digits with the dtmf tool. A
+  menu that took the date of birth will often ask for the zip code next.
 - If a keypad entry is REJECTED ("that does not match our records", "invalid
   entry") and the menu re-prompts, send the SAME digits again with the dtmf
   tool exactly once before doing anything else. Touch-tone digits are
@@ -277,10 +285,11 @@ export function buildTools() {
       function: {
         name: "get_patient_details",
         description:
-          "Fetch the patient's verification details (date of birth, insurance, " +
-          "callback number) when the office or its phone menu asks for them. " +
-          "Returns the exact values to read back — including a keypad-ready " +
-          "digit string for entering the date of birth into an IVR via dtmf.",
+          "Fetch the patient's verification details (date of birth, zip code, " +
+          "insurance, callback number) when the office or its phone menu asks " +
+          "for them. Returns the exact values to read back — including " +
+          "keypad-ready digit strings for entering the date of birth or zip " +
+          "code into an IVR via dtmf.",
         parameters: {
           type: "object",
           properties: {
@@ -288,7 +297,7 @@ export function buildTools() {
               type: "array",
               items: {
                 type: "string",
-                enum: ["date_of_birth", "insurance", "callback_number"],
+                enum: ["date_of_birth", "postal_code", "insurance", "callback_number"],
               },
               description: "Which detail(s) the office asked for.",
             },
