@@ -1,7 +1,13 @@
 /** What the booking wizard is allowed to remember between sessions.
  *  Guards two things: the office/doctor never carry over, and patient details
  *  always do — including through payloads written before the split existed. */
-import { PER_CALL_FIELDS, persistable, restorable } from "../src/lib/prefill";
+import {
+  LEGACY_PREFILL_KEY,
+  PER_CALL_FIELDS,
+  persistable,
+  prefillKey,
+  restorable,
+} from "../src/lib/prefill";
 
 let pass = 0;
 let fail = 0;
@@ -71,6 +77,19 @@ ok("round-trip is stable", JSON.stringify(restorable(persistable(FORM) as Record
 ok(
   "every per-call field is a real form key",
   [...PER_CALL_FIELDS].every((f) => f in FORM),
+);
+
+console.log("Per-user scoping:");
+ok("two users get different keys", prefillKey("user_aaa") !== prefillKey("user_bbb"));
+ok("the same user gets a stable key", prefillKey("user_aaa") === prefillKey("user_aaa"));
+ok("the user id is what scopes the key", prefillKey("user_aaa").includes("user_aaa"));
+ok(
+  "no scoped key can collide with the legacy one",
+  prefillKey("user_aaa") !== LEGACY_PREFILL_KEY,
+);
+ok(
+  "the legacy key is not a prefix match for a scoped key",
+  !prefillKey("user_aaa").startsWith(LEGACY_PREFILL_KEY + "_"),
 );
 
 console.log(fail === 0 ? `\n✅ ${pass} passed, 0 failed` : `\n❌ ${pass} passed, ${fail} failed`);

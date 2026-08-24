@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "@clerk/nextjs";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { persistable, restorable } from "@/lib/prefill";
+import { LEGACY_PREFILL_KEY, persistable, prefillKey, restorable } from "@/lib/prefill";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -77,13 +78,15 @@ const EMPTY_FORM = {
 type FormState = typeof EMPTY_FORM;
 
 // Patient details are remembered on this device between sessions; the office
-// and doctor are not (see PER_CALL_FIELDS). localStorage — cleared by the
-// browser, never sent anywhere.
-const PREFILL_KEY = "booking-prefill";
-
-function loadPrefill(): Partial<FormState> | null {
+// and doctor are not (see PER_CALL_FIELDS). Scoped per signed-in user, so a
+// second person on the same browser gets a blank form rather than the first
+// person's patient. localStorage — cleared by the browser, never sent anywhere.
+function loadPrefill(userId: string): Partial<FormState> | null {
   try {
-    const raw = localStorage.getItem(PREFILL_KEY);
+    // Drop the pre-scoping blob wherever it still exists: it can't be
+    // attributed to anyone, so it must not be handed to whoever signs in.
+    localStorage.removeItem(LEGACY_PREFILL_KEY);
+    const raw = localStorage.getItem(prefillKey(userId));
     if (!raw) return null;
     return restorable(JSON.parse(raw) as Record<string, unknown>, EMPTY_FORM);
   } catch {
@@ -91,11 +94,19 @@ function loadPrefill(): Partial<FormState> | null {
   }
 }
 
-function savePrefill(form: FormState) {
+function savePrefill(userId: string, form: FormState) {
   try {
-    localStorage.setItem(PREFILL_KEY, JSON.stringify(persistable(form)));
+    localStorage.setItem(prefillKey(userId), JSON.stringify(persistable(form)));
   } catch {
     /* prefill is best-effort */
+  }
+}
+
+function detectTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  } catch {
+    return ""; // leave blank; server falls back
   }
 }
 
@@ -183,6 +194,7 @@ export function BookingForm({ onSubmitted }: { onSubmitted: () => Promise<void> 
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const { isLoaded, userId } = useAuth();
   const stepRef = useRef<HTMLDivElement>(null);
 
   // Re-focus the step's first input after each transition so Enter always
@@ -200,33 +212,31 @@ export function BookingForm({ onSubmitted }: { onSubmitted: () => Promise<void> 
     set("days", form.days.includes(d) ? form.days.filter((x) => x !== d) : [...form.days, d]);
   }
 
-  // Guards the save-on-change effect below. Both effects run in the SAME mount
-  // commit, and the hydrating setForm above only queues an update — so the
-  // save effect's first run still sees EMPTY_FORM. Skipping that first run is
-  // what stops it from erasing the very prefill we just read.
-  const hydrated = useRef(false);
+  // Which user's saved details are currently in `form`. Gates the save effect:
+  // a plain "have we hydrated yet" boolean isn't enough, because hydration now
+  // waits on Clerk and can land several renders after mount — so the save
+  // effect could otherwise run first and write EMPTY_FORM over stored details.
+  // Tracking WHO also makes a user switch self-correcting: the id stops
+  // matching, so the form re-hydrates from the new user and saving is blocked
+  // until it does.
+  const [hydratedFor, setHydratedFor] = useState<string | null>(null);
 
   useEffect(() => {
-    const prefill = loadPrefill();
-    if (prefill) setForm((f) => ({ ...f, ...prefill }));
-    try {
-      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      if (tz) setForm((f) => ({ ...f, timezone: f.timezone || tz }));
-    } catch {
-      /* leave blank; server falls back */
-    }
-  }, []);
+    if (!isLoaded || !userId || hydratedFor === userId) return;
+    // Reset from EMPTY_FORM rather than merging into the existing form, so a
+    // switch of user can't leave the previous patient's values behind.
+    const prefill = loadPrefill(userId);
+    setForm({ ...EMPTY_FORM, ...prefill, timezone: detectTimezone() });
+    setHydratedFor(userId);
+  }, [isLoaded, userId, hydratedFor]);
 
   // Persist as you type, not just on a successful booking — otherwise patient
   // details entered in a session that never placed a call are lost, which is
   // exactly the retyping this is meant to remove.
   useEffect(() => {
-    if (!hydrated.current) {
-      hydrated.current = true;
-      return;
-    }
-    savePrefill(form);
-  }, [form]);
+    if (!userId || hydratedFor !== userId) return;
+    savePrefill(userId, form);
+  }, [form, userId, hydratedFor]);
 
   const summary = useMemo(
     () => `${daysSummary(form.days)} · ${to12(form.earliest)}–${to12(form.latest)} · ${URGENCY_LABEL[form.urgency]}`,

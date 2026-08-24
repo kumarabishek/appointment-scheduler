@@ -40,3 +40,15 @@ export function restorable<T extends Record<string, unknown>>(
   }
   return picked as Partial<T>;
 }
+
+/** Saved details are scoped to the Clerk user, so two people sharing a browser
+ *  never see each other's patient. Checked on every read rather than cleared on
+ *  a sign-out event — an event we'd have to catch in the instant before Clerk
+ *  navigates away, and would miss if the tab were simply closed. */
+export const prefillKey = (userId: string) => `booking-prefill:${userId}`;
+
+/** The pre-scoping key. Whoever last used the browser wrote it, and there is no
+ *  way to tell who that was — so it is deleted on sight rather than migrated
+ *  into the current user's scope. Costs one re-type; avoids handing one
+ *  person's date of birth to another. */
+export const LEGACY_PREFILL_KEY = "booking-prefill";
