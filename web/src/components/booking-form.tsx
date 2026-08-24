@@ -77,8 +77,9 @@ const EMPTY_FORM = {
 };
 type FormState = typeof EMPTY_FORM;
 
-// Patient details are remembered on this device between sessions; the office
-// and doctor are not (see PER_CALL_FIELDS). Scoped per signed-in user, so a
+// Patient details are remembered on this device between sessions; the office,
+// doctor and insurance member ID are not (see NEVER_REMEMBERED). Scoped per
+// signed-in user, so a
 // second person on the same browser gets a blank form rather than the first
 // person's patient. localStorage — cleared by the browser, never sent anywhere.
 function loadPrefill(userId: string): Partial<FormState> | null {

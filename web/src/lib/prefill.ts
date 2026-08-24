@@ -6,23 +6,33 @@
  * the component so the rule — which patient fields reach disk — is testable.
  */
 
-/** Re-entered every call, never restored: the office being dialed and the
- *  doctor being asked for. Carrying these over is how you accidentally dial
- *  last month's clinic. Anything NOT listed here persists, so a new patient
- *  field is remembered by default. */
-export const PER_CALL_FIELDS = new Set<string>([
+/** Never written to storage. A field earns a place here for one of two reasons:
+ *
+ *  1. it belongs to THIS call, not to the patient — carrying it over is how you
+ *     end up dialing last month's clinic;
+ *  2. it is sensitive enough to be worth re-typing rather than leaving on disk.
+ *
+ *  Anything NOT listed persists, so a new patient field is remembered by
+ *  default. */
+export const NEVER_REMEMBERED = new Set<string>([
+  // (1) Per-call: where you're calling, and who you're asking for.
   "providerName",
   "providerPhone",
   "preferredProvider",
   // The office's zone, not the patient's — re-detected from the browser on
   // mount, so persisting it would only let a stale one outlive its office.
   "timezone",
+  // (2) The member ID is the highest-value identifier on the form, and
+  // insurance is already an optional step. The carrier name ("Cigna") still
+  // persists — it is the ID specifically that isn't worth leaving in
+  // plaintext for a field you re-type once a year.
+  "insuranceMemberId",
 ]);
 
 /** The subset of a form that gets written to storage. */
 export function persistable<T extends Record<string, unknown>>(form: T): Partial<T> {
   return Object.fromEntries(
-    Object.entries(form).filter(([k]) => !PER_CALL_FIELDS.has(k)),
+    Object.entries(form).filter(([k]) => !NEVER_REMEMBERED.has(k)),
   ) as Partial<T>;
 }
 
@@ -36,7 +46,7 @@ export function restorable<T extends Record<string, unknown>>(
 ): Partial<T> {
   const picked: Record<string, unknown> = {};
   for (const key of Object.keys(shape)) {
-    if (key in saved && !PER_CALL_FIELDS.has(key)) picked[key] = saved[key];
+    if (key in saved && !NEVER_REMEMBERED.has(key)) picked[key] = saved[key];
   }
   return picked as Partial<T>;
 }
