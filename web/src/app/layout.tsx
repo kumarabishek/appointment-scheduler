@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { ClerkProvider, UserButton } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { dark } from "@clerk/themes";
@@ -39,6 +40,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           )}
           {children}
           <Toaster position="top-center" richColors />
+          {/* Page views only. Route paths here are static (/, /sign-in,
+              /sign-up) — no patient identifier ever appears in a URL, so
+              nothing sent to Vercel carries PHI. */}
+          <Analytics />
         </body>
       </html>
     </ClerkProvider>
