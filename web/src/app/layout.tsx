@@ -13,7 +13,17 @@ const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
   title: "Appointment Scheduler",
-  description: "AI agent that calls offices and books appointments for you.",
+  description: "AI agent that calls doctors' offices and books appointments for you.",
+  // Needed for opengraph-image to resolve to an absolute URL, which crawlers
+  // require. Falls back to the deployment domain when run locally.
+  metadataBase: new URL(
+    process.env.PUBLIC_BASE_URL ?? "https://med-appointment-scheduler.vercel.app",
+  ),
+  openGraph: {
+    title: "Appointment Scheduler",
+    description: "AI agent that calls doctors' offices and books appointments for you.",
+    type: "website",
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
