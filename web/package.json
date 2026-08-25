@@ -24,6 +24,7 @@
     "@clerk/themes": "^2.4.57",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
+    "@vercel/analytics": "^2.0.1",
     "chrono-node": "^2.7.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
