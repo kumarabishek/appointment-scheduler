@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Appointment Scheduler">
+  <rect width="64" height="64" rx="14" fill="#6d7cf7"/>
+  <!-- Handset, drawn as one thick stroke so it stays legible at 16px. -->
+  <path d="M21 17c-3.6 0-6.4 3-6 6.6 1 9 5.2 17 11.6 23.4S41 57.2 50 58.2c3.6.4 6.6-2.4 6.6-6v-5.4c0-2.9-2.1-5.4-5-5.9l-4.6-.8c-2.5-.4-5 .6-6.5 2.7l-1 1.4c-4.6-2.6-8.4-6.4-11-11l1.4-1c2.1-1.5 3.1-4 2.7-6.5l-.8-4.6c-.5-2.9-3-5-5.9-5z"
+        fill="#ffffff" transform="translate(-4 -6) scale(0.92)"/>
+</svg>
