@@ -7,9 +7,17 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 //  - /api/decide         → the ntfy app POSTs the push-button URL with no
 //    session; it enforces its own signed per-call token (decideToken.ts).
 //  - /sign-in, /sign-up  → the auth pages themselves.
+//  - /                   → the landing page a signed-out visitor (and any link
+//    preview crawler) sees. page.tsx renders the app only for a session; the
+//    data behind it stays session-only regardless.
+//  - /opengraph-image    → the preview card crawlers fetch. It has no file
+//    extension, so the matcher below does NOT treat it as a static asset;
+//    without this it 404s and every shared link renders imageless.
 // Everything else (the UI + /api/requests, /api/calls) requires a signed-in
 // Clerk user.
 const isPublic = createRouteMatcher([
+  "/",
+  "/opengraph-image",
   "/api/webhooks/vapi",
   "/api/test-ivr(.*)",
   "/api/decide",

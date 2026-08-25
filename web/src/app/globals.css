@@ -116,6 +116,27 @@
     var(--background);
 }
 
+/* Landing transcript: rows fade in as the call plays back. Applied only once
+   JS has taken over, so the transcript is readable without it. */
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-reveal {
+  animation: reveal 0.42s ease forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-reveal {
+    animation: none;
+  }
+}
+
 /* Animated waveform for in-progress calls. */
 @keyframes wf {
   0%,
