@@ -3,7 +3,7 @@ import { ImageResponse } from "next/og";
 /** Preview card for links shared to LinkedIn, Slack, iMessage and the rest.
  *  Generated rather than a checked-in PNG so it is built from the same colors
  *  as the app and cannot drift from them. */
-export const alt = "Appointment Scheduler — doctor appointments, booked by phone";
+export const alt = "Appointment Scheduler — an AI voice agent that books doctor appointments by phone";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -53,7 +53,7 @@ export default async function Image() {
         </div>
 
         <div style={{ color: "#9aa0ad", fontSize: 30, marginTop: 40, display: "flex" }}>
-          Doctor appointments, booked by phone.
+          An AI voice agent that books doctor appointments by phone.
         </div>
       </div>
     ),

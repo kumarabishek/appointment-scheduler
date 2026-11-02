@@ -5,11 +5,12 @@
  *
  *  The hero is a real booking call replaying in time rather than a product
  *  screenshot: what distinguishes this app is not its UI but that it holds the
- *  line with a receptionist on your behalf. Details are from a genuine call,
+ *  line with a receptionist on your behalf. The copy around it names the AI
+ *  voice agent outright, so a visitor knows who is speaking in the transcript. Details are from a genuine call,
  *  with the patient's identifiers replaced.
  */
 import { useEffect, useRef, useState } from "react";
-import { Check, Phone } from "lucide-react";
+import { AudioLines, CalendarCheck, Check, Hash, Hourglass, Phone } from "lucide-react";
 import { SignInButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 
@@ -52,6 +53,32 @@ const STAMPS = [
   "00:03", "00:56", "01:08", "01:18", "01:35", "01:40", "03:52", "04:37",
   "05:14", "07:46", "07:55", "10:29", "10:29",
 ];
+
+/** What the voice agent does on every call, in the order it happens. */
+const STEPS = [
+  {
+    icon: Hash,
+    title: "Works the phone menu",
+    body: "Listens to the menu and presses the right keys to reach scheduling.",
+  },
+  {
+    icon: Hourglass,
+    title: "Waits on hold",
+    body: "Stays on the line through the hold music, however long it takes.",
+  },
+  {
+    icon: CalendarCheck,
+    title: "Talks and books",
+    body: "Speaks with the receptionist and books a time inside your window.",
+  },
+];
+
+const WHO: Record<Turn["who"], string> = {
+  menu: "menu",
+  keypad: "keypad",
+  staff: "staff",
+  agent: "AI agent",
+};
 
 const FIGURES = [
   ["10:29", "on the phone"],
@@ -126,28 +153,34 @@ export function Landing() {
         </header>
 
         <section className="pb-9 pt-[82px]">
-          <p className="mb-[18px] font-mono text-[11.5px] uppercase tracking-[0.16em] text-primary">
-            Doctor appointments, booked by phone
+          <p className="mb-[18px] flex items-center gap-2 font-mono text-[11.5px] uppercase tracking-[0.16em] text-primary">
+            <AudioLines className="size-3.5" />
+            AI voice agent · Doctor appointments, booked by phone
           </p>
-          <h1 className="mb-[30px] text-[clamp(1.95rem,4.9vw,3.05rem)] font-semibold leading-[1.08] tracking-[-0.032em]">
+          <h1 className="mb-5 text-[clamp(1.95rem,4.9vw,3.05rem)] font-semibold leading-[1.08] tracking-[-0.032em]">
             Someone still has to call.
             {/* The break is set rather than left to wrapping: the concession on
                 one line, the payoff on the next, is the whole idea. */}
             <span className="block text-primary">It doesn&apos;t have to be you.</span>
           </h1>
+          <p className="mb-[30px] max-w-[58ch] text-[16.5px] leading-[1.55] text-muted-foreground">
+            Our <span className="font-medium text-foreground">AI voice agent</span> phones the
+            doctor&apos;s office for you. It navigates the phone menu, waits on hold, talks to
+            the receptionist, and books an appointment that fits your schedule.
+          </p>
           <SignInButton mode="modal">
-            <Button size="lg">Book a doctor&apos;s appointment</Button>
+            <Button size="lg">Let the AI agent book it</Button>
           </SignInButton>
         </section>
 
         <section
           ref={panel}
-          aria-label="Transcript of a real booking call"
+          aria-label="Transcript of a real booking call made by the AI voice agent"
           className="overflow-hidden rounded-[14px] border bg-card"
         >
           <div className="flex items-center gap-2.5 border-b border-border/60 bg-muted px-[18px] py-3.5">
             <span className="size-[7px] flex-none rounded-full bg-good shadow-[0_0_0_3px_rgba(52,211,153,0.14)]" />
-            <span className="text-sm font-medium">A real call to a primary care office</span>
+            <span className="text-sm font-medium">The AI voice agent on a real call to a primary care office</span>
             <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground/70">
               {clock}
             </span>
@@ -198,9 +231,32 @@ export function Landing() {
           </div>
         </section>
 
+        <section aria-label="How the AI voice agent books" className="pt-12">
+          <h2 className="mb-5 text-lg font-semibold tracking-tight">
+            How the AI voice agent books your appointment
+          </h2>
+          <ol className="grid gap-3 sm:grid-cols-3">
+            {STEPS.map(({ icon: Icon, title, body }, i) => (
+              <li key={title} className="rounded-[14px] border bg-card p-[18px]">
+                <div className="mb-3 flex items-center gap-2.5">
+                  <span className="flex size-7 flex-none items-center justify-center rounded-lg bg-primary/12 text-primary">
+                    <Icon className="size-4" />
+                  </span>
+                  <span className="font-mono text-[11.5px] tabular-nums text-muted-foreground/70">
+                    0{i + 1}
+                  </span>
+                </div>
+                <h3 className="mb-1 text-[14.5px] font-semibold">{title}</h3>
+                <p className="text-[13.5px] leading-[1.5] text-muted-foreground">{body}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
         <section className="flex flex-wrap items-center justify-between gap-6 pt-12">
           <p className="max-w-[46ch] text-[14.5px] text-muted-foreground">
-            Medical details are encrypted, and read out only when an office asks for them.
+            Medical details are encrypted, and the agent reads them out only when an office
+            asks for them.
           </p>
           <SignInButton mode="modal">
             <Button size="lg">Book a doctor&apos;s appointment</Button>
@@ -227,7 +283,7 @@ function Row({ turn, className }: { turn: Turn; className: string }) {
   const system = turn.who === "menu" || turn.who === "keypad";
   return (
     <div
-      className={`grid grid-cols-[50px_1fr] items-baseline gap-3.5 px-[18px] py-[7px] sm:grid-cols-[58px_70px_1fr] ${className}`}
+      className={`grid grid-cols-[50px_1fr] items-baseline gap-3.5 px-[18px] py-[7px] sm:grid-cols-[58px_74px_1fr] ${className}`}
     >
       <span className="font-mono text-[11.5px] tabular-nums text-muted-foreground/70">
         {turn.at}
@@ -241,7 +297,7 @@ function Row({ turn, className }: { turn: Turn; className: string }) {
               : "text-muted-foreground/70"
         }`}
       >
-        {turn.who}
+        {WHO[turn.who]}
       </span>
       <span
         className={
