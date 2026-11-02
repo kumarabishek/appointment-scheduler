@@ -43,16 +43,7 @@ export default async function Image() {
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.1 }}>
-          <div style={{ color: "#eef0f4", fontSize: 74, fontWeight: 600, letterSpacing: "-0.03em" }}>
-            Someone still has to call.
-          </div>
-          <div style={{ color: "#6d7cf7", fontSize: 74, fontWeight: 600, letterSpacing: "-0.03em" }}>
-            It doesn&apos;t have to be you.
-          </div>
-        </div>
-
-        <div style={{ color: "#9aa0ad", fontSize: 30, marginTop: 40, display: "flex" }}>
+        <div style={{ color: "#eef0f4", fontSize: 64, fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1.15, display: "flex" }}>
           An AI voice agent that books doctor appointments by phone.
         </div>
       </div>
