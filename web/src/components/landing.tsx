@@ -157,17 +157,11 @@ export function Landing() {
             <AudioLines className="size-3.5" />
             AI voice agent · Doctor appointments, booked by phone
           </p>
-          <h1 className="mb-5 text-[clamp(1.95rem,4.9vw,3.05rem)] font-semibold leading-[1.08] tracking-[-0.032em]">
-            Someone still has to call.
-            {/* The break is set rather than left to wrapping: the concession on
-                one line, the payoff on the next, is the whole idea. */}
-            <span className="block text-primary">It doesn&apos;t have to be you.</span>
-          </h1>
-          <p className="mb-[30px] max-w-[58ch] text-[16.5px] leading-[1.55] text-muted-foreground">
+          <h1 className="mb-[30px] max-w-[46ch] text-[clamp(1.2rem,2.6vw,1.45rem)] font-normal leading-[1.5] tracking-[-0.01em] text-muted-foreground">
             Our <span className="font-medium text-foreground">AI voice agent</span> phones the
             doctor&apos;s office for you. It navigates the phone menu, waits on hold, talks to
             the receptionist, and books an appointment that fits your schedule.
-          </p>
+          </h1>
           <SignInButton mode="modal">
             <Button size="lg">Let the AI agent book it</Button>
           </SignInButton>
